@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNDEF — Gestión de Poblaciones</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9a84c; --gold-light: #e8c97e;
+    --dark: #0f0e0c; --dark2: #1a1814; --dark3: #252318;
+    --cream: #f5f0e8; --cream2: #e8e0d0; --text: #d4c9b0;
+    --sent-color: #2d6a2d;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--dark); color:var(--text); min-height:100vh; }
+
+  header { background:var(--dark2); border-bottom:1px solid var(--gold); padding:20px 40px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+  .logo { font-family:'Playfair Display',serif; font-size:1.4rem; color:var(--gold); letter-spacing:.05em; }
+  .logo span { color:var(--cream); font-weight:400; font-size:1rem; display:block; letter-spacing:.15em; }
+  .hstats { display:flex; gap:30px; font-size:.8rem; }
+  .stat { display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .stat strong { font-size:1.4rem; color:var(--gold); font-family:'Playfair Display',serif; }
+
+  main { padding:40px; max-width:1400px; margin:0 auto; }
+
+  .tabs { display:flex; gap:8px; margin-bottom:24px; flex-wrap:wrap; }
+  .tab { background:var(--dark3); border:1px solid rgba(201,168,76,.2); color:var(--text); padding:8px 18px; border-radius:4px; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:.85rem; transition:all .2s; }
+  .tab:hover { border-color:var(--gold); color:var(--gold); }
+  .tab.active { background:var(--gold); color:var(--dark); font-weight:500; border-color:var(--gold); }
+
+  .search-bar { margin-bottom:24px; }
+  .search-input { width:100%; background:var(--dark3); border:1px solid rgba(201,168,76,.25); border-radius:6px; padding:10px 16px; color:var(--cream); font-family:'DM Sans',sans-serif; font-size:.9rem; outline:none; }
+  .search-input:focus { border-color:var(--gold); }
+
+  h2 { font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--cream); margin-bottom:4px; }
+  .sub { font-size:.85rem; color:var(--gold-light); margin-bottom:28px; letter-spacing:.1em; text-transform:uppercase; }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:16px; }
+
+  .card { background:var(--dark2); border:1px solid rgba(201,168,76,.15); border-radius:8px; padding:20px; cursor:pointer; transition:all .25s; position:relative; overflow:hidden; }
+  .card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--gold); opacity:0; transition:opacity .2s; }
+  .card:hover { border-color:var(--gold); transform:translateY(-2px); box-shadow:0 8px 30px rgba(0,0,0,.4); }
+  .card:hover::before { opacity:1; }
+  .card.sent { border-color:rgba(45,106,45,.5); }
+  .card.sent::before { background:#4caf50; opacity:1; }
+  .card.imprenta { border-color:rgba(201,168,76,.5); background:linear-gradient(135deg,var(--dark2),#1f1c10); }
+  .card.imprenta:hover { border-color:var(--gold-light); }
+
+  .card-icon { font-size:1.5rem; margin-bottom:6px; }
+  .card-name { font-family:'Playfair Display',serif; font-size:1.1rem; color:var(--cream); margin-bottom:6px; }
+  .card.imprenta .card-name { color:var(--gold); font-size:1.2rem; }
+  .card-badge { display:inline-block; font-size:.7rem; padding:2px 8px; border-radius:20px; background:rgba(201,168,76,.1); color:var(--gold); border:1px solid rgba(201,168,76,.3); margin-bottom:8px; }
+  .card-pres { font-size:.8rem; color:var(--text); margin-bottom:3px; }
+  .card-email { font-size:.78rem; color:var(--text); opacity:.7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sent-badge { position:absolute; top:12px; right:12px; background:var(--sent-color); color:#90ee90; font-size:.65rem; padding:2px 8px; border-radius:20px; font-weight:500; }
+  .no-results { color:var(--text); text-align:center; padding:60px; opacity:.6; font-style:italic; }
+
+  .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:200; justify-content:center; align-items:flex-start; padding:40px 20px; overflow-y:auto; backdrop-filter:blur(4px); }
+  .overlay.open { display:flex; }
+  .modal { background:var(--dark2); border:1px solid var(--gold); border-radius:12px; width:100%; max-width:780px; padding:36px; position:relative; animation:up .3s ease; }
+  @keyframes up { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
+  .mclose { position:absolute; top:16px; right:20px; background:none; border:none; color:var(--text); font-size:1.4rem; cursor:pointer; }
+  .mclose:hover { color:var(--gold); }
+  .mtitle { font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--cream); margin-bottom:4px; }
+  .msub { font-size:.85rem; color:var(--gold); text-transform:uppercase; letter-spacing:.1em; margin-bottom:24px; }
+  .igrid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:28px; padding-bottom:28px; border-bottom:1px solid rgba(201,168,76,.2); }
+  .iitem label { font-size:.7rem; text-transform:uppercase; letter-spacing:.1em; color:var(--gold); display:block; margin-bottom:3px; }
+  .iitem span { font-size:.9rem; color:var(--cream2); }
+  .ch { font-family:'Playfair Display',serif; font-size:1.2rem; color:var(--cream); margin-bottom:16px; }
+  .fg { margin-bottom:14px; }
+  .fg label { display:block; font-size:.75rem; text-transform:uppercase; letter-spacing:.08em; color:var(--gold); margin-bottom:6px; }
+  .fg input, .fg textarea { width:100%; background:var(--dark3); border:1px solid rgba(201,168,76,.25); border-radius:6px; padding:10px 14px; color:var(--cream); font-family:'DM Sans',sans-serif; font-size:.9rem; outline:none; transition:border-color .2s; }
+  .fg input:focus, .fg textarea:focus { border-color:var(--gold); }
+  .fg textarea { min-height:120px; resize:vertical; }
+
+  .bcc-box { background:var(--dark3); border:1px solid rgba(201,168,76,.15); border-radius:8px; padding:16px; margin-bottom:14px; }
+  .bcc-hdr { display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; }
+  .bcc-lbl { font-size:.8rem; text-transform:uppercase; letter-spacing:.08em; color:var(--gold); }
+  .bcc-arr { transition:transform .2s; }
+  .bcc-arr.open { transform:rotate(180deg); }
+  .bcc-btns { display:none; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; }
+  .bcc-btn { background:rgba(201,168,76,.1); border:1px solid rgba(201,168,76,.3); color:var(--gold); padding:5px 12px; border-radius:4px; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:.78rem; transition:all .2s; white-space:nowrap; }
+  .bcc-btn:hover { background:rgba(201,168,76,.22); }
+  .bcc-cnt { font-size:.75rem; color:var(--gold); margin-left:auto; }
+  .bcc-list { display:none; margin-top:12px; max-height:200px; overflow-y:auto; }
+  .bcc-list.open { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:6px; }
+  .bcc-item { display:flex; align-items:center; gap:8px; cursor:pointer; padding:4px 6px; border-radius:4px; }
+  .bcc-item:hover { background:rgba(201,168,76,.08); }
+  .bcc-item input { accent-color:var(--gold); }
+  .bcc-item span { font-size:.8rem; color:var(--text); }
+
+  .fdrop { border:2px dashed rgba(201,168,76,.3); border-radius:8px; padding:20px; text-align:center; cursor:pointer; transition:all .2s; margin-bottom:14px; }
+  .fdrop:hover { border-color:var(--gold); background:rgba(201,168,76,.04); }
+  .fdrop-txt { font-size:.85rem; color:var(--text); }
+  .fdrop-txt strong { color:var(--gold); }
+  .flist { font-size:.8rem; color:var(--gold-light); }
+  .fitem { display:flex; align-items:center; gap:6px; padding:3px 0; }
+  .frm { cursor:pointer; color:#cc4444; }
+
+  .btnrow { display:flex; gap:12px; justify-content:flex-end; margin-top:20px; }
+  .btn { padding:11px 24px; border-radius:6px; border:none; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:.9rem; font-weight:500; transition:all .2s; }
+  .btn-p { background:var(--gold); color:var(--dark); }
+  .btn-p:hover { background:var(--gold-light); }
+  .btn-s { background:transparent; color:var(--text); border:1px solid rgba(201,168,76,.3); }
+  .btn-s:hover { border-color:var(--gold); color:var(--gold); }
+
+  .spanel { position:fixed; right:0; top:0; bottom:0; width:300px; background:var(--dark2); border-left:1px solid rgba(201,168,76,.2); transform:translateX(100%); transition:transform .3s; z-index:150; display:flex; flex-direction:column; }
+  .spanel.open { transform:translateX(0); }
+  .spanel-hdr { padding:20px; border-bottom:1px solid rgba(201,168,76,.2); display:flex; align-items:center; justify-content:space-between; }
+  .spanel-title { font-family:'Playfair Display',serif; font-size:1.1rem; color:var(--cream); }
+  .spanel-close { background:none; border:none; color:var(--text); cursor:pointer; font-size:1.2rem; }
+  .sbody { flex:1; overflow-y:auto; padding:16px; }
+  .sentry { padding:12px; border:1px solid rgba(201,168,76,.12); border-radius:6px; margin-bottom:10px; font-size:.8rem; }
+  .sentry-name { font-weight:500; color:var(--cream); margin-bottom:4px; }
+  .sentry-date { color:var(--gold); font-size:.7rem; margin-bottom:4px; }
+  .sentry-subj { color:var(--text); font-style:italic; }
+  .sentry-bcc { color:#90ee90; font-size:.7rem; margin-top:4px; }
+  .sclear { margin:12px 16px; }
+
+  .fab { position:fixed; bottom:30px; right:30px; background:var(--dark2); border:1px solid var(--gold); color:var(--gold); padding:12px 20px; border-radius:30px; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:.85rem; font-weight:500; display:flex; align-items:center; gap:8px; box-shadow:0 4px 20px rgba(0,0,0,.4); transition:all .2s; z-index:140; }
+  .fab:hover { background:var(--gold); color:var(--dark); }
+  .fab-n { background:var(--gold); color:var(--dark); border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-size:.7rem; font-weight:700; }
+
+  /* Justificante de pago */
+  .just-section { background:var(--dark3); border:1px solid rgba(201,168,76,.2); border-radius:8px; padding:16px 18px; margin-bottom:20px; }
+  .just-section-title { font-size:.75rem; text-transform:uppercase; letter-spacing:.1em; color:var(--gold); margin-bottom:12px; }
+  .just-drop { border:2px dashed rgba(201,168,76,.25); border-radius:6px; padding:16px; text-align:center; cursor:pointer; transition:all .2s; }
+  .just-drop:hover { border-color:var(--gold); background:rgba(201,168,76,.04); }
+  .just-drop-txt { font-size:.82rem; color:var(--text); }
+  .just-drop-txt strong { color:var(--gold); }
+  .just-preview { margin-top:12px; display:none; }
+  .just-preview.show { display:block; }
+  .just-file-info { display:flex; align-items:center; justify-content:space-between; background:rgba(45,106,45,.15); border:1px solid rgba(45,106,45,.35); border-radius:6px; padding:10px 14px; }
+  .just-file-name { font-size:.82rem; color:#90ee90; display:flex; align-items:center; gap:8px; }
+  .just-file-actions { display:flex; gap:8px; }
+  .just-btn { background:none; border:1px solid rgba(201,168,76,.3); color:var(--gold); border-radius:4px; padding:4px 10px; font-size:.75rem; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all .2s; }
+  .just-btn:hover { background:rgba(201,168,76,.1); }
+  .just-btn.del { border-color:rgba(204,68,68,.4); color:#cc6666; }
+  .just-btn.del:hover { background:rgba(204,68,68,.1); }
+  .card-just { margin-top:6px; display:flex; align-items:center; gap:5px; font-size:.72rem; color:#90ee90; }
+  .card-just.nope { color:var(--text); opacity:.5; }
+
+  /* Pago */
+  .pago-section { background:var(--dark3); border:1px solid rgba(201,168,76,.2); border-radius:8px; padding:16px 18px; margin-bottom:20px; }
+  .pago-section-title { font-size:.75rem; text-transform:uppercase; letter-spacing:.1em; color:var(--gold); margin-bottom:12px; }
+  .pago-total-box { background:rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.25); border-radius:6px; padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; }
+  .pago-total-lbl { font-size:.78rem; color:var(--text); }
+  .pago-total-amt { font-family:'Playfair Display',serif; font-size:1.4rem; color:var(--gold); font-weight:700; }
+  .pago-btns { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .pago-btn-pagada { background:#2d6a2d; color:#90ee90; border:1px solid rgba(45,106,45,.6); border-radius:6px; padding:10px 18px; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:.85rem; font-weight:600; transition:all .2s; flex:1; }
+  .pago-btn-pagada:hover { background:#3a8a3a; }
+  .pago-btn-pagada.active { background:#3a8a3a; box-shadow:0 0 0 2px #90ee90; }
+  .pago-btn-cuenta { background:#7a4200; color:#ffb347; border:1px solid rgba(255,140,0,.4); border-radius:6px; padding:10px 18px; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:.85rem; font-weight:600; transition:all .2s; flex:1; }
+  .pago-btn-cuenta:hover { background:#8a5000; }
+  .pago-btn-cuenta.active { background:#8a5000; box-shadow:0 0 0 2px #ffb347; }
+  .pago-btn-sin { background:transparent; color:var(--text); border:1px solid rgba(201,168,76,.2); border-radius:6px; padding:10px 18px; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:.85rem; transition:all .2s; flex:1; }
+  .pago-btn-sin:hover { border-color:var(--gold); }
+  .pago-cuenta-box { display:none; background:rgba(255,140,0,.06); border:1px solid rgba(255,140,0,.25); border-radius:6px; padding:14px; }
+  .pago-cuenta-box.show { display:block; }
+  .pago-cuenta-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .pago-cuenta-row label { font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:#ffb347; white-space:nowrap; }
+  .pago-cuenta-row input { background:var(--dark2); border:1px solid rgba(255,140,0,.35); border-radius:6px; padding:8px 12px; color:var(--cream); font-family:'Playfair Display',serif; font-size:1rem; font-weight:700; width:140px; outline:none; text-align:center; }
+  .pago-cuenta-row input:focus { border-color:#ffb347; }
+  .pago-resto-box { display:flex; align-items:center; justify-content:space-between; background:rgba(255,140,0,.1); border-radius:4px; padding:8px 12px; }
+  .pago-resto-lbl { font-size:.78rem; color:#ffb347; }
+  .pago-resto-amt { font-family:'Playfair Display',serif; font-size:1.2rem; color:#ffb347; font-weight:700; }
+  .card-pago { margin-top:5px; font-size:.72rem; padding:2px 8px; border-radius:20px; display:inline-block; }
+  .card-pago.pagada { background:rgba(45,106,45,.3); color:#90ee90; border:1px solid rgba(45,106,45,.5); }
+  .card-pago.cuenta { background:rgba(255,140,0,.15); color:#ffb347; border:1px solid rgba(255,140,0,.35); }
+  .card-pago.pendiente { background:rgba(201,168,76,.06); color:var(--text); border:1px solid rgba(201,168,76,.15); opacity:.6; }
+  .card-cena { margin-top:8px; padding-top:8px; border-top:1px solid rgba(201,168,76,.15); display:flex; align-items:center; gap:8px; }
+  .cena-lbl { font-size:.72rem; color:var(--gold); text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+  .cena-val { font-size:.9rem; color:var(--cream); font-family:'Playfair Display',serif; font-weight:700; }
+  .cena-badge { font-size:.7rem; color:#90ee90; background:rgba(45,106,45,.25); border:1px solid rgba(45,106,45,.4); padding:1px 7px; border-radius:20px; }
+  .cena-badge.empty { color:var(--text); background:rgba(201,168,76,.06); border-color:rgba(201,168,76,.15); }
+
+  .cena-section { background:var(--dark3); border:1px solid rgba(201,168,76,.2); border-radius:8px; padding:16px 18px; margin-bottom:20px; }
+  .cena-section-title { font-size:.75rem; text-transform:uppercase; letter-spacing:.1em; color:var(--gold); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+  .cena-input-row { display:flex; align-items:center; gap:12px; }
+  .cena-input-row input[type=number] { width:120px; background:var(--dark2); border:1px solid rgba(201,168,76,.3); border-radius:6px; padding:9px 12px; color:var(--cream); font-family:'Playfair Display',serif; font-size:1.1rem; font-weight:700; outline:none; text-align:center; transition:border-color .2s; }
+  .cena-input-row input[type=number]:focus { border-color:var(--gold); }
+  .cena-input-row input[type=number]::-webkit-inner-spin-button { opacity:.5; }
+  .cena-save-btn { background:var(--gold); color:var(--dark); border:none; border-radius:6px; padding:9px 18px; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:.85rem; font-weight:600; transition:all .2s; }
+  .cena-save-btn:hover { background:var(--gold-light); }
+  .cena-saved-msg { font-size:.78rem; color:#90ee90; display:none; }
+  .cena-saved-msg.show { display:inline; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">UNDEF <span>Gestión de Poblaciones</span></div>
+  <div class="hstats">
+    <div class="stat"><strong id="sTotal">84</strong>Poblaciones</div>
+    <div class="stat"><strong id="sSent">0</strong>Enviados</div>
+    <div class="stat"><strong id="sCena">0</strong>Cena adultos</div>
+    <div class="stat"><strong id="sCenaNinos">0</strong>Cena niños</div>
+    <div class="stat"><strong id="sJust">0</strong>Justificantes</div>
+    <div class="stat"><strong id="sPagadas">0</strong>Pagadas</div>
+    <div class="stat"><strong id="sComensalesPagados">0</strong>Comensales pagados</div>
+    <div class="stat"><strong id="sSocios">0</strong>S. Honoríficos</div>
+    <div class="stat"><strong>7</strong>Áreas</div>
+  </div>
+</header>
+
+<main>
+  <!-- Sección principal -->
+  <div id="secNav" style="display:flex;gap:0;border-bottom:2px solid rgba(201,168,76,.2);margin-bottom:0;">
+    <button id="btnSecPoblaciones" onclick="setSeccion('poblaciones')" style="flex:1;padding:14px 20px;background:var(--gold);color:var(--dark);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:700;font-size:.95rem;letter-spacing:.04em;transition:all .2s;">🏛️ Poblaciones Federadas</button>
+    <button id="btnSecSocios" onclick="setSeccion('socios')" style="flex:1;padding:14px 20px;background:var(--dark2);color:var(--gold);border:none;border-left:1px solid rgba(201,168,76,.2);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.95rem;letter-spacing:.04em;transition:all .2s;">⭐ Socios Honoríficos</button>
+  </div>
+
+  <!-- SECCION POBLACIONES -->
+  <div id="secPoblaciones">
+    <div class="tabs">
+      <button class="tab active" onclick="setArea('todas',this)">Todas</button>
+      <button class="tab" onclick="setArea('I',this)">Área I</button>
+      <button class="tab" onclick="setArea('II',this)">Área II</button>
+      <button class="tab" onclick="setArea('III',this)">Área III</button>
+      <button class="tab" onclick="setArea('IV',this)">Área IV</button>
+      <button class="tab" onclick="setArea('V',this)">Área V</button>
+      <button class="tab" onclick="setArea('VI',this)">Área VI</button>
+      <button class="tab" onclick="setArea('VII',this)">Área VII</button>
+    </div>
+    <div class="search-bar">
+      <input class="search-input" type="text" id="search" placeholder="Buscar población, presidente, email..." oninput="render()">
+    </div>
+    <h2 id="heading">Todas las Poblaciones</h2>
+    <div class="sub" id="subh"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <!-- SECCION SOCIOS HONORIFICOS -->
+  <div id="secSocios" style="display:none;">
+    <div style="padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h2 style="margin:0;font-family:'Playfair Display',serif;color:var(--gold)">⭐ Socios Honoríficos</h2>
+        <div class="sub" id="subhSocios" style="margin-top:4px"></div>
+      </div>
+      <button onclick="openAddSocio()" style="background:var(--gold);color:var(--dark);border:none;border-radius:8px;padding:11px 22px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:.9rem;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .2s;">
+        ➕ Agregar Socio Honorífico
+      </button>
+    </div>
+    <div class="search-bar">
+      <input class="search-input" type="text" id="searchSocios" placeholder="Buscar socio honorífico..." oninput="renderSocios()">
+    </div>
+    <div class="grid" id="gridSocios"></div>
+  </div>
+</main>
+
+<div class="overlay" id="overlayAddSocio" style="display:none" onclick="if(event.target===this)closeAddSocio()">
+  <div class="modal" style="max-width:420px">
+    <button class="mclose" onclick="closeAddSocio()">✕</button>
+    <div class="mtitle" id="addSocioTitle">Agregar Socio Honorífico</div>
+    <div class="msub">⭐ Socios Honoríficos</div>
+    <div style="margin-top:20px;display:flex;flex-direction:column;gap:14px;">
+      <div class="fg"><label>Nombre completo *</label><input type="text" id="socioNombre" placeholder="Nombre y apellidos"></div>
+      <div class="fg"><label>Email *</label><input type="email" id="socioMail" placeholder="correo@ejemplo.com"></div>
+      <div class="fg"><label>Teléfono</label><input type="tel" id="socioTelefono" placeholder="600 000 000"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button onclick="saveSocio()" style="flex:1;background:var(--gold);color:var(--dark);border:none;border-radius:6px;padding:12px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:.95rem;cursor:pointer;">Guardar</button>
+      <button onclick="closeAddSocio()" style="background:transparent;color:var(--text);border:1px solid rgba(201,168,76,.2);border-radius:6px;padding:12px 18px;font-family:'DM Sans',sans-serif;cursor:pointer;">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <button class="mclose" onclick="closeModal()">✕</button>
+    <div class="mtitle" id="mTitle"></div>
+    <div class="msub" id="mSub"></div>
+    <div class="igrid" id="mInfo"></div>
+    <div class="cena-section">
+      <div class="cena-section-title">🍽️ Asistentes a la Cena</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div>
+          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);margin-bottom:6px;">👤 Adultos</div>
+          <div class="cena-input-row">
+            <input type="number" id="cenaAdultos" min="0" placeholder="0" oninput="calcTotal()">
+          </div>
+        </div>
+        <div>
+          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);margin-bottom:6px;">🧒 Niños</div>
+          <div class="cena-input-row">
+            <input type="number" id="cenaNinos" min="0" placeholder="0" oninput="calcTotal()">
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:12px;">
+        <button class="cena-save-btn" onclick="saveCena()">Guardar</button>
+        <span class="cena-saved-msg" id="cenaSavedMsg">✓ Guardado</span>
+      </div>
+    </div>
+
+    <div class="pago-section" id="pagoSection">
+      <div class="pago-section-title">💶 Estado del Pago</div>
+      <div class="pago-total-box">
+        <span class="pago-total-lbl">Total a ingresar (adultos × 21 € + niños × 10 €)</span>
+        <span class="pago-total-amt" id="pagoTotalAmt">— €</span>
+      </div>
+      <div class="pago-btns">
+        <button class="pago-btn-pagada" id="btnPagadaTotal" onclick="setPago('total')">✅ PAGADA TOTALIDAD</button>
+        <button class="pago-btn-cuenta" id="btnPagadaCuenta" onclick="setPago('cuenta')">🟠 PAGO A CUENTA</button>
+        <button class="pago-btn-sin" id="btnSinPago" onclick="setPago('sin')">✕ Sin pago</button>
+      </div>
+      <div class="pago-cuenta-box" id="pagoCuentaBox">
+        <div class="pago-cuenta-row">
+          <label>Cantidad ingresada (€)</label>
+          <input type="number" id="pagoCuentaAmt" min="0" placeholder="0" oninput="calcResto(); savePagoCuenta()">
+        </div>
+        <div class="pago-resto-box">
+          <span class="pago-resto-lbl">Resta por abonar</span>
+          <span class="pago-resto-amt" id="pagoRestoAmt">— €</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="just-section">
+      <div class="just-section-title">📄 Justificante de Pago</div>
+      <div class="just-drop" onclick="document.getElementById('justFile').click()" ondragover="event.preventDefault()" ondrop="onJustDrop(event)" id="justDrop">
+        <div style="font-size:1.6rem;margin-bottom:6px">📎</div>
+        <div class="just-drop-txt"><strong>Haz clic</strong> o arrastra el justificante aquí<br><span style="font-size:.75rem;opacity:.6">PDF, imagen — máx. 1MB</span></div>
+      </div>
+      <input type="file" id="justFile" accept=".pdf,image/*" style="display:none" onchange="onJustFile(this.files)">
+      <div class="just-preview" id="justPreview">
+        <div class="just-file-info">
+          <div class="just-file-name" id="justFileName">📄 archivo.pdf</div>
+          <div class="just-file-actions">
+            <button class="just-btn" onclick="justView()">👁 Ver</button>
+            <button class="just-btn" onclick="justDownload()">⬇ Descargar</button>
+            <button class="just-btn del" onclick="justDelete()">✕ Eliminar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ch">Redactar Correo</div>
+    <div class="fg"><label>Para</label><input type="text" id="mTo" readonly style="opacity:.7"></div>
+    <div class="fg"><label>Remitente</label><input type="email" value="cena50aniversarioundef@gmail.com" readonly style="opacity:.7;cursor:default"></div>
+    <div class="fg"><label>Asunto</label><input type="text" id="mSubject" placeholder="Asunto del correo"></div>
+    <div class="fg"><label>Mensaje</label><textarea id="mBody" placeholder="Escribe tu mensaje aquí..."></textarea></div>
+
+    <div class="bcc-box">
+      <div class="bcc-hdr" onclick="toggleBcc()">
+        <span class="bcc-lbl">📋 Copia oculta (BCC) a otras poblaciones</span>
+        <span class="bcc-arr" id="bccArr">▼</span>
+      </div>
+      <div class="bcc-btns" id="bccBtns">
+        <button class="bcc-btn" onclick="bccAll()">✅ Seleccionar todas</button>
+        <button class="bcc-btn" onclick="bccNone()">☐ Deseleccionar todas</button>
+        <button class="bcc-btn" onclick="bccArea()">📍 Solo esta área</button>
+        <span class="bcc-cnt" id="bccCnt"></span>
+      </div>
+      <div class="bcc-list" id="bccList"></div>
+    </div>
+
+    <div class="fdrop" onclick="document.getElementById('fi').click()" ondragover="event.preventDefault()" ondrop="onDrop(event)">
+      <div style="font-size:1.8rem;margin-bottom:8px">📎</div>
+      <div class="fdrop-txt"><strong>Haz clic</strong> o arrastra archivos para adjuntar</div>
+    </div>
+    <input type="file" id="fi" multiple style="display:none" onchange="addFiles(this.files)">
+    <div class="flist" id="fList"></div>
+
+    <div class="btnrow">
+      <button class="btn btn-s" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-p" onclick="doSend()">Enviar Correo ✉️</button>
+    </div>
+  </div>
+</div>
+
+<div class="spanel" id="spanel">
+  <div class="spanel-hdr">
+    <div class="spanel-title">Historial de Envíos</div>
+    <button class="spanel-close" onclick="document.getElementById('spanel').classList.remove('open')">✕</button>
+  </div>
+  <div class="sbody" id="sbody"></div>
+  <button class="btn btn-s sclear" onclick="clearLog()">Borrar historial</button>
+</div>
+
+<div id="fbLoader" style="display:flex;position:fixed;inset:0;background:rgba(15,14,12,.92);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:16px">
+  <div style="width:44px;height:44px;border:3px solid rgba(201,168,76,.2);border-top-color:#c9a84c;border-radius:50%;animation:spin .8s linear infinite"></div>
+  <div style="color:#c9a84c;font-family:'DM Sans',sans-serif;font-size:.9rem">Conectando con la nube...</div>
+</div>
+<div id="fbError" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#7a1a1a;color:#ffaaaa;padding:10px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.85rem;z-index:999">
+  ⚠️ Error al guardar. Comprueba tu conexión.
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<button class="fab" onclick="openLog()">✉️ Enviados <span class="fab-n" id="fabN">0</span></button>
+<button class="fab" onclick="exportPDF()" style="bottom:80px;background:var(--dark2);border-color:#c0392b;color:#e74c3c;">📄 Exportar PDF</button>
+
+<script>
+var DATA = [
+  {n:"IMPRENTA",a:"—",e:"Organización UNDEF",d:"",cp:"",p:"Miguel Angel",t:"",mail:"miguelangelfullana74@gmail.com",cif:""},
+  {n:"Ador",a:"I",e:"Junta de Moros i Cristians",d:"PlaÇa de la Font, 1",cp:"46729 ADOR (VALENCIA)",p:"Isabel Mascarell Vidal",t:"655648137",mail:"morosicristiansador@gmail.com"},
+  {n:"Agullent",a:"I",e:"Junta de Festes de Moros i Cristians",d:"C/Major, 4",cp:"46890 AGULLENT (VALENCIA)",p:"Sonia Cuerda Llorens",t:"606166923",mail:"jfmc-agullent@hotmail.com"},
+  {n:"Aielo de Malferit",a:"I",e:"Associacion de festes de Moros i Cristians",d:"AV. Alfredo Castello, 51",cp:"46812 AIELO DE MALFERIT (VALENCIA)",p:"Miguel Mateu",t:"682035085",mail:"associaciofestesaielo@hotmail.com"},
+  {n:"Albaida",a:"I",e:"Junta Central de Moros y Cristianos de Albaida",d:"Pz. Major, 7",cp:"46860 ALBAIDA (VALENCIA)",p:"Ainhoa Bernabeu",t:"",mail:"jucefmc@gmail.com"},
+  {n:"Beniganim",a:"I",e:"Junta Central de Moros i Cristians de Beniganim",d:"Avda. Reial, 24",cp:"46830 BENIGANIM (VALENCIA)",p:"David Vidal Vidal",t:"651036687",mail:"juntacentralbeniganim@hotmail.com"},
+  {n:"Bocairent",a:"I",e:"Associacio de Festes de Moros i Cristians a Sant Blai",d:"Pl. Joan de Joanes 21",cp:"46880 BOCAIRENT (VALENCIA)",p:"Damian Sanchis Tormo",t:"665363208",mail:"info@santblai.org"},
+  {n:"Cocentaina",a:"I",e:"Federacio Junta de Festes de Moros i Cristians",d:"C/ Sants de la Pedra, 7",cp:"03820 COCENTAINA (ALICANTE)",p:"Rafael Monar Blanes",t:"615384146",mail:"fjfmiccocentaina@gmail.com"},
+  {n:"Fontanars dels Alforins",a:"I",e:"Associacio de Festes Patronals de Moros i Cristians",d:"Passeig de l Ombria s/n",cp:"46635 FONTANARS DEL ALFORINS (VALENCIA)",p:"Rafael Pastor Esteve",t:"",mail:"moroscristianasfontanars@gmail.com"},
+  {n:"Llutxent",a:"I",e:"Germandat de Moros i Cristians de Llutxent",d:"Placa del Xio, 12",cp:"46838 LLUTXENT (VALENCIA)",p:"Joaquin Canet Canet",t:"629407765",mail:"info@germocril.org"},
+  {n:"L Olleria",a:"I",e:"Junta Central de Festes de Moros i Cristians de L Olleria",d:"C/ Batle, 1",cp:"46850 L OLLERIA (VALENCIA)",p:"M Dolores Gil Garcia",t:"653962799",mail:"presidentejuntacentral@hotmail.com"},
+  {n:"Muro de l Alcoi",a:"I",e:"Federacio Junta de Festes de Moros i Cristians",d:"Placa Matzem s/n",cp:"03830 MURO (ALICANTE)",p:"Francisco Miguel Vicedo",t:"608248651",mail:"juntafestesmuro@telefonica.net"},
+  {n:"Rotova",a:"I",e:"Federacio Commissio Festes de Moros i Cristians",d:"C/ Mayor, 1",cp:"46725 ROTOVA (VALENCIA)",p:"Dolores Momparler Giner",t:"696227099",mail:"olasob55@gmail.com"},
+  {n:"Alzira",a:"II",e:"Associacio Cultural de Moros i Cristians La Vila Alzira",d:"Avda Hispanitat 7",cp:"46600 ALZIRA (VALENCIA)",p:"Juan Santacreu Silvestre",t:"",mail:"secretaria.micalzira@gmail.com"},
+  {n:"Castello",a:"II",e:"Associacio Festera de Moros i Cristians de Castello",d:"C/ Pla Rubio, 1",cp:"46270 CASTELLO (VALENCIA)",p:"Eduard Ferrando Cuenca",t:"653820491",mail:"afmmicc@hotmail.com"},
+  {n:"Genoves",a:"II",e:"Associacio Moros i Cristians del Genoves",d:"Plaza Inmaculada, 3",cp:"46894 GENOVES (VALENCIA)",p:"Monica Soler Sanchis",t:"",mail:"moroscristiansgenoves@gmail.com"},
+  {n:"La Pobla Llarga",a:"II",e:"Junta Central Moros i Cristians",d:"C/ Glorieta, 1",cp:"46670 LA POBLA LLARGA (VALENCIA)",p:"Silvia Domenech Parreno",t:"669434832",mail:"juntacentralmorosicristians@gmail.com"},
+  {n:"Lleida",a:"II",e:"Associacio Festa Moros i Cristians",d:"C/ Panera, 1",cp:"25002 LLEIDA (CATALUNA)",p:"Josep Lluis Gazques Pons",t:"669745882",mail:"miclleida@miclleida.org"},
+  {n:"Paterna",a:"II",e:"Federacion Intercomparsas de Paterna",d:"C/ San Francisco de Borja, 4",cp:"46980 PATERNA (VALENCIA)",p:"Eva Esparcia Llorens",t:"",mail:"federacion.secret@hotmail.com"},
+  {n:"Riba-Roja de Turia",a:"II",e:"Moros i Cristians Riba-Roja de Turia",d:"C/ Virgen de Begona, 16",cp:"46190 RIBA-ROJA DE TURIA (VALENCIA)",p:"Cristina Gonzalez Saez",t:"662433597",mail:"eramirez1956@hotmail.com"},
+  {n:"Torrent",a:"II",e:"Federacio de Moros i Cristians de Torrent",d:"C/ Moralets, 5B",cp:"46900 TORRENT (VALENCIA)",p:"Francisco Javier Santamaria",t:"610549254",mail:"govern@fmct.es"},
+  {n:"Valencia Federacio",a:"II",e:"Federacio Valenciana de Moros i Cristians",d:"C/ San Dionisio, 8, bajo",cp:"46003 VALENCIA (VALENCIA)",p:"Jose Luis Llorens Fuster",t:"",mail:"fevamic@gmail.com"},
+  {n:"Valverde de Jucar",a:"II",e:"Hermandad del Santo Nino",d:"Crta. Cuenca, 18",cp:"16100 VALVERDE DE JUCAR (CUENCA)",p:"Francisco Javier Poyatos",t:"",mail:"ciamorosvalverdedejucar@gmail.com"},
+  {n:"Almansa",a:"III",e:"Agrupacion de Comparsas de Moros y Cristianos de Almansa",d:"C/ La Estrella, 2",cp:"02640 ALMANSA (ALBACETE)",p:"Francisco Millan Yanez",t:"618972246",mail:"morosycristianosdealmansa@gmail.com"},
+  {n:"Aspe",a:"III",e:"Union de Moros y Cristianos Virgen de las Nieves de Aspe",d:"C/ San Pedro, 30",cp:"03680 ASPE (ALICANTE)",p:"Enrique Alenda Galvan",t:"670357196",mail:"comunicacion@morosycristianosdeaspe.es"},
+  {n:"Banyeres de Mariola",a:"III",e:"Commissio de Festes de Sant Jordi",d:"Plaza del Ayuntamiento, 1",cp:"03450 BANYERES DE MARIOLA (ALICANTE)",p:"Beatriz Frances Tortosa",t:"645462224",mail:"festes1@portademariola.com"},
+  {n:"Beneixama",a:"III",e:"Comision de Fiestas M. y C.",d:"C/ Dr. Silvestre 1",cp:"03460 BENEIXAMA (ALICANTE)",p:"Josep Miquel Conca Alonso",t:"651859812",mail:"info@morosicristiansbeneixama.com"},
+  {n:"Caudete",a:"III",e:"Asociacion de Comparsas de Moros y Cristianos Ntra Sra de Gracia",d:"Avda. Virgen de Gracia, 15",cp:"02660 CAUDETE (ALBACETE)",p:"Ambrosio Sanchez Amoros",t:"652869460",mail:"comparsascaudete@gmail.com"},
+  {n:"El Camp de Mirra",a:"III",e:"Junta de Festers Moros i Cristians",d:"C/ Major, 3",cp:"03469 CAMP DE MIRRA (ALICANTE)",p:"—",t:"",mail:"juntadefestescdm@gmail.com"},
+  {n:"Hondon de las Nieves",a:"III",e:"Asociacion de Moriscos y Cristianos Hondon de las Nieves",d:"Avd/crevillente 28",cp:"03688 HONDON DE LAS NIEVES (ALICANTE)",p:"Alejandra tari Canto",t:"",mail:"aso.moriscosycristianoshn@gmail.com"},
+  {n:"La Font de la Figuera",a:"III",e:"Cofraria i Junta de Festers de Santa Barbara",d:"Travessia Portal Valencia s/n",cp:"46630 LA FONT DE LA FIGUERA (VALENCIA)",p:"Micaela Biosca",t:"608658734",mail:"miciclafont@yahoo.es"},
+  {n:"Monforte del Cid",a:"III",e:"Comision de Fiestas de Moros y Cristianos Monforte del Cid",d:"Plaza de Espana, 1",cp:"03670 MONFORTE DEL CID (ALICANTE)",p:"Juan Jose Hernandez Rico",t:"638058084",mail:"comisionfiestasmonfortedelcid@gmail.com"},
+  {n:"Novelda",a:"III",e:"Federacion de Comparsas de Moros y Cristianos Santa M Magdalena",d:"Pz. Santos Medicos, 6",cp:"03660 NOVELDA (ALICANTE)",p:"Clara Maria Amoros Ferrandez",t:"",mail:"juntacentralnovelda@hotmail.com"},
+  {n:"Petrer",a:"III",e:"Union de Festejos San Bonifacio Martir",d:"C/ Miguel Amat, 1",cp:"03610 PETRER (ALICANTE)",p:"Francisco Cerda Brotons",t:"655563558",mail:"presidente@petrerenfestes.com"},
+  {n:"Salinas",a:"III",e:"Comision de Fiestas",d:"Plaza de espana, 8",cp:"03638 SALINAS (ALICANTE)",p:"Primitivo Mataix Amoros",t:"699644003",mail:"ayuntamiento@salinas.es"},
+  {n:"Sax",a:"III",e:"Mayordmia de San Blas - Federacion de Comparsas",d:"C/ Medico Cortes, 14",cp:"03630 SAX (ALICANTE)",p:"Vicente Aliaga Gil",t:"",mail:"info@mayordomiasanblas.es"},
+  {n:"Villena",a:"III",e:"Junta Central de Fiestas de Moros y Cristianos de Villena",d:"Pza. Santiago 3",cp:"03400 VILLENA (ALICANTE)",p:"Rosa Maria Pardo Sanchez",t:"",mail:"protocolo@juntacentral.com"},
+  {n:"Albatera",a:"IV",e:"Federacion de Comparsas de MyC Santiago Apostol",d:"C/ Maestra Adela Beneyto, 1",cp:"03340 ALBATERA (ALICANTE)",p:"Pedro Miguel Rael Fuentes",t:"639647944",mail:"albateraenfiestas@gmail.com"},
+  {n:"Almoradi",a:"IV",e:"Asociacion Cultural y Festera de Moros y Cristianos San Andres",d:"C/ Espana, 35",cp:"03160 ALMORADI (ALICANTE)",p:"Jose Oscar Navarro Rabasco",t:"647624286",mail:"presidencia.jcf@gmail.com"},
+  {n:"Callosa de Segura",a:"IV",e:"Asociacion de Fiestas de Moros y Cristianos San Roque",d:"Pl. Reina Fabiola, 10",cp:"03360 CALLOSA DE SEGURA (ALICANTE)",p:"Francisco Lillo Avila",t:"615514009",mail:"amycsanroque@gmail.com"},
+  {n:"Crevillent",a:"IV",e:"Asociacion de Fiestas de Moros y Cristianos San Francisco de Asis",d:"Plaza de la Constitucion, 11",cp:"03330 CREVILLENT (ALICANTE)",p:"Luis Manchon Mas",t:"676082045",mail:"morosicristianscrevillent@gmail.com"},
+  {n:"Elche",a:"IV",e:"Asociacion Festera de Moros y Cristianos de Elche",d:"C/ Trinquet s/n",cp:"03202 ELCHE (ALICANTE)",p:"Julian Fernandez Candela",t:"617338807",mail:"info@morosycristianoselche.com"},
+  {n:"Guardamar del Segura",a:"IV",e:"Junta Central de Moros y Cristianos de Guardamar del Segura",d:"C/ Colon, 32",cp:"03140 GUARDAMAR DEL SEGURA (ALICANTE)",p:"Francisco J. Cidoncha Baldo",t:"604131296",mail:"info@jcguardamar.com"},
+  {n:"Orihuela",a:"IV",e:"Asociacion de Fiestas de Moros y Cristianos Santas Justa y Rufina",d:"C/ Francisco Die 32-34",cp:"03300 ORIHUELA (ALICANTE)",p:"Enrique Riquelme Terres",t:"646972774",mail:"presidencia@morosycristianosorihuela.com"},
+  {n:"Santa Pola",a:"IV",e:"Asociacion Festero Cultural de Moros y Cristianos de Santa Pola",d:"C/ Castanos, 10",cp:"03130 SANTA POLA (ALICANTE)",p:"Asuncion Perez Martinez",t:"650736928",mail:"afcmcsantapola@gmail.com"},
+  {n:"Agost",a:"V",e:"Federacion de Moros y Cristianos de Agost",d:"C/ Dean Mas, 4",cp:"03698 AGOST (ALICANTE)",p:"Patricia Teresa Chorro Morales",t:"666263340",mail:"unionfestejosagost@gmail.com"},
+  {n:"Alicante-Federacion",a:"V",e:"Federacion de Moros y Cristianos de Alicante",d:"C/ Bailen, 20",cp:"03100 ALICANTE (ALICANTE)",p:"Jose Pascual Saura Gallud",t:"661733877",mail:"fed.morosycristianosalicante@gmail.com"},
+  {n:"Altozano",a:"V",e:"Asociacion de Comparsas de Moros y Cristianos de Altozano",d:"Pz. Luis Braille, 12 bajo",cp:"03010 ALICANTE (ALICANTE)",p:"M Isabel Valero Lopez",t:"678043362",mail:"secretaria.acmyca@gmail.com"},
+  {n:"Busot",a:"V",e:"Asociacion Moros y Cristianos Busot",d:"C/Dr.Brotons, 5",cp:"03111 BUSOT (ALICANTE)",p:"M Luisa Sirera",t:"627957487",mail:"morosicristians.busot@gmail.com"},
+  {n:"Castalla",a:"V",e:"Agrupacion de Comparsas de Moros y Cristianos",d:"Placa Major, 1",cp:"03420 CASTALLA (ALICANTE)",p:"Vanesa Felipe Arenas",t:"",mail:"casafester@gmail.com"},
+  {n:"El Campello",a:"V",e:"Junta Festera de Moros i Cristians El Campello",d:"Av Generalitat, 2",cp:"03560 EL CAMPELLO (ALICANTE)",p:"Alejandro Sanchez Climent",t:"",mail:"juntafesteradelcampello@gmail.com"},
+  {n:"El Rebolledo",a:"V",e:"Asociacion festera de Moros y Cristianos de El Rebolledo",d:"C/ Altura, 2",cp:"03113 REBOLLEDO (ALICANTE)",p:"Vanesa Sanchez Rosello",t:"639600059",mail:"morosycristianosdelrebolledo@gmail.com"},
+  {n:"Ibi",a:"V",e:"Federacion de Comparsas Moros y Cristianos de Ibi",d:"Plaza de la iglesia, 2",cp:"03440 IBI (ALICANTE)",p:"Eva Galera Verdu",t:"630140262",mail:"secretario@morosycristianosibi.com"},
+  {n:"Mutxamel",a:"V",e:"Comision de Fiestas de Moros y Cristianos de Mutxamel",d:"C/ Pio XII, 23",cp:"03110 MUTXAMEL (ALICANTE)",p:"Francisco Poveda Carratala",t:"657289642",mail:"festesmutxamel@mutxamel.net"},
+  {n:"Onil",a:"V",e:"Associacio de Comparses de Moros i Cristians Verge de la Salut",d:"Avda. Constitucion, 20",cp:"03430 ONIL (ALICANTE)",p:"Francisco Dura Mira",t:"607983148",mail:"asociacioncomparsasonil@gmail.com"},
+  {n:"San Blas Alicante",a:"V",e:"Comparsas Moros y Cristianos San Blas",d:"Avda. Conde Soto Ameno",cp:"03005 ALICANTE (ALICANTE)",p:"M Mar Marin Aracil",t:"699713726",mail:"morosycristianossanblas@gmail.com"},
+  {n:"Sant Vicent del Raspeig",a:"V",e:"Federacion Union de Comparsas de Moros y Cristianos Ber-Largas",d:"C/ Capitan Torregrosa, 5",cp:"03690 SANT VICENT DEL RASPEIG (ALICANTE)",p:"Ricardo Bernabeu Catala",t:"666106868",mail:"presidencia@berlargas.org"},
+  {n:"Villafranqueza El Palamo",a:"V",e:"Asociacion de Comparsas de Moros y Cristianos de El Palamo",d:"Plaza de Constitucion, 4",cp:"03112 VILLAFRANQUEZA (ALICANTE)",p:"—",t:"",mail:"amycelpalamo@hotmail.com"},
+  {n:"Xixona",a:"V",e:"Federacio de Sant Bartomeu i Sant Sebastia",d:"C/ Marcel Mira, 10",cp:"03100 XIXONA (ALICANTE)",p:"Jonathan Gras Murillo",t:"689276466",mail:"federaciodefestes@gmail.com"},
+  {n:"Xixona Geladors",a:"V",e:"Asociacion Cultural y Festera de Heladeros",d:"C/ Mallorca, 2 y 4",cp:"03100 XIXONA (ALICANTE)",p:"Juan Carlos Ramos Candela",t:"651821609",mail:"festesdelsgeladors1978@gmail.com"},
+  {n:"Altea",a:"VI",e:"Federacio de Moros i Cristians Sant Blai Altea",d:"C/ Pont de Moncau, 14",cp:"03590 ALTEA (ALICANTE)",p:"Pedro Lloret Marti",t:"",mail:"info@santblai.es"},
+  {n:"Bellreguard",a:"VI",e:"Associacio Moros i Cristians",d:"C/ Monduver",cp:"46713 BELLREGUARD (VALENCIA)",p:"Eusebio Martinez Sevilla",t:"696865529",mail:"morosicristiansbellreguard@gmail.com"},
+  {n:"Benidorm",a:"VI",e:"Asociacion Moros y Cristianos de Benidorm",d:"C/ La Biga, 3",cp:"03501 BENIDORM (ALICANTE)",p:"Arturo Mira Fuentes",t:"667389810",mail:"moroscristianosbenidorm@hotmail.com"},
+  {n:"Benissa",a:"VI",e:"Associacio de Moros i Cristians de Benissa",d:"Avda. Pais Valencia, 97",cp:"03720 BENISSA (ALICANTE)",p:"M Inmaculada Font Morell",t:"609989991",mail:"morosicristiansbenissa@hotmail.es"},
+  {n:"Callosa den Sarria",a:"VI",e:"Associacio de Moros i Cristians",d:"Placa del Convent, 8 Bajo",cp:"03510 CALLOSA DEN SARRIA (ALICANTE)",p:"Natalia Cano Ferrando",t:"",mail:"junta@callosaenfestes.com"},
+  {n:"Calp",a:"VI",e:"Associacio de Moros i Cristians Santissim Crist de la Suor",d:"C/ Sant Roc s/n",cp:"03710 CALP (ALICANTE)",p:"Rocio Pastor Pastor",t:"677132168",mail:"morosicristianscalp@gmail.com"},
+  {n:"Denia",a:"VI",e:"Federacion de Moros y Cristianos de Denia",d:"Plaza de la Constitucion, 10",cp:"03700 DENIA (ALICANTE)",p:"Amparo Mata Ribes",t:"",mail:"directivafemmicc@gmail.com"},
+  {n:"La Vila Joiosa",a:"VI",e:"Associacio Santa Marta",d:"Carrer Ciutat de Valencia, 27",cp:"03570 LA VILA JOIOSA (ALICANTE)",p:"Marta Mingot Soriano",t:"681389509",mail:"info@associaciosantamarta.org"},
+  {n:"Moraira",a:"VI",e:"Junta Central de Moros y Cristianos de Moraira",d:"Plaza Virgen del Carmen, 15",cp:"03724 MORAIRA (ALICANTE)",p:"Elionor Oller Valles",t:"",mail:"morosdemoraira@gmail.com"},
+  {n:"Oliva",a:"VI",e:"Federacio de Moros i Cristians Oliva",d:"Carrer de l Alcalde Juan Sancho",cp:"46780 OLIVA (VALENCIA)",p:"Lluis Gregori Garcia",t:"606704399",mail:"administracio@olivamorosicristians.es"},
+  {n:"Piles",a:"VI",e:"Asociacion Moros y Cristianos de Piles",d:"C/ Porxe, 33",cp:"46712 PILES (VALENCIA)",p:"Carla Pascual Cuadros",t:"",mail:"mic.piles@gmail.com"},
+  {n:"Xabia",a:"VI",e:"Junta de Fiestas de Moros y Cristianos de Xabia",d:"C/ Triana, 2",cp:"03730 XABIA (ALICANTE)",p:"Monica Leal Gomez",t:"",mail:"juntadefestes2012@gmail.com"},
+  {n:"Abanilla",a:"VII",e:"Federacion de Asociaciones de Fiestas de Moros y Cristianos Santa Cruz",d:"C/ Encomienda, 6",cp:"30640 ABANILLA (MURCIA)",p:"Manuel Cutillas Tora",t:"",mail:"mmccabanilla@gmail.com"},
+  {n:"Archena",a:"VII",e:"Junta Central de Fiestas de Moros y Cristianos",d:"C/Virgen de la salud s/n",cp:"30600 ARCHENA (MURCIA)",p:"Jose Martinez Garcia",t:"",mail:"morosycristianosdearchena@gmail.com"},
+  {n:"Benamaurel",a:"VII",e:"Comision de Fiestas de Benamaurel",d:"Plaza Mayor, 1",cp:"18817 BENAMAUREL (GRANADA)",p:"Juan Francisco Torregrosa",t:"617651692",mail:"alcalde@benamaurel.es"},
+  {n:"Campotejar",a:"VII",e:"Asociacion Cultural Tradicional Tiraores de Campotejar",d:"C/ Constitucion, 9",cp:"18565 CAMPOTEJAR (GRANADA)",p:"Francisco Alvarez Rosales",t:"679345661",mail:"pacovitines@hotmail.com"},
+  {n:"Caravaca de la Cruz",a:"VII",e:"Comision de Festejos de la Real e Ilustre Cofradia",d:"C/ de las Monjas, 9",cp:"30400 CARAVACA DE LA CRUZ (MURCIA)",p:"Jesus Lopez Baquero",t:"",mail:"cfestejoscaravaca@hotmail.com"},
+  {n:"Cieza",a:"VII",e:"Fiestas del Escudo La Invasion",d:"Plaza San Bartolome, 3",cp:"30530 CIEZA (MURCIA)",p:"Cristobal Herrera Ortega",t:"606372701",mail:"fiestasdelescudolainvasion@gmail.com"},
+  {n:"Jumilla",a:"VII",e:"Asociacion de Moros y Cristianos Don Pedro I",d:"Plaza de Alcoholera de Menor, 3",cp:"30520 JUMILLA (MURCIA)",p:"Gines Palazon Verdu",t:"",mail:"morosycristianosjumilla@gmail.com"},
+  {n:"Los Alcazares",a:"VII",e:"Asociacion Cultural de Penas de las Incursiones Berberiscas",d:"C/ Calixto Sanchez Madrid, 11",cp:"30710 LOS ALCAZARES (MURCIA)",p:"Jose Luis Gimenez Vera",t:"686113912",mail:"asociacionberberisca@gmail.com"},
+  {n:"Molina de Segura",a:"VII",e:"Federacion Festero Cultural de Moros y Cristianos de Molina de Segura",d:"Avda de la Industria 2",cp:"30500 MOLINA DE SEGURA (MURCIA)",p:"Jose Antonio Rodriguez Ortiz",t:"629630978",mail:"morosycristianosmolinadesegura@gmail.com"},
+  {n:"Murcia",a:"VII",e:"Federacion de Asociaciones de Fiestas de Moros y Cristianos de Murcia",d:"Cuartel de Artilleria Jaime I, Pabellon 2",cp:"30002 MURCIA (MURCIA)",p:"Aranzazu Arce Munoz",t:"645645931",mail:"presidentemorosycristianos@gmail.com"},
+  {n:"Santomera",a:"VII",e:"Junta Central de Moros y Cristianos de Santomera",d:"C/ Trinquete, 26",cp:"30140 SANTOMERA (MURCIA)",p:"Pedro Jesus Asensio Perez",t:"",mail:"juntacentralsantomera@gmail.com"},
+  {n:"Torre-Pacheco",a:"VII",e:"Asociacion de Fiestas Historicas de Torre-Pacheco",d:"C/ Aniceto Leon, 10A",cp:"30700 TORRE-PACHECO (MURCIA)",p:"Juana Maria Hernendez Saura",t:"",mail:"trinitariosyberberiscostp@gmail.com"}
+];
+
+var currentArea = 'todas';
+var currentIdx = -1;
+var currentIsSocio = false;
+var editSocioId = null;
+var files = [];
+var bccOpen = false;
+var log = [];
+var cenaData = {};
+var cenaNinosData = {};
+var justData = {};
+var pagoData = {};
+var sociosData = [];
+
+// Justificantes siguen en localStorage (son binarios grandes)
+// ─── FIREBASE: ver bloque al final del body ────────────────────────
+
+function showLoader(on) {
+  var el = document.getElementById('fbLoader');
+  if (el) el.style.display = on ? 'flex' : 'none';
+}
+
+function showSaveError() {
+  var el = document.getElementById('fbError');
+  if (el) { el.style.display='block'; setTimeout(function(){ el.style.display='none'; }, 4000); }
+}
+
+function setSeccion(sec) {
+  var isPob = sec === 'poblaciones';
+  document.getElementById('secPoblaciones').style.display = isPob ? '' : 'none';
+  document.getElementById('secSocios').style.display = isPob ? 'none' : '';
+  document.getElementById('btnSecPoblaciones').style.background = isPob ? 'var(--gold)' : 'var(--dark2)';
+  document.getElementById('btnSecPoblaciones').style.color = isPob ? 'var(--dark)' : 'var(--gold)';
+  document.getElementById('btnSecSocios').style.background = isPob ? 'var(--dark2)' : 'var(--gold)';
+  document.getElementById('btnSecSocios').style.color = isPob ? 'var(--gold)' : 'var(--dark)';
+  if (!isPob) renderSocios();
+}
+
+// ---- SOCIOS HONORIFICOS ----
+function openAddSocio(id) {
+  editSocioId = id || null;
+  var s = id ? sociosData.find(function(x){return x.id===id;}) : null;
+  document.getElementById('addSocioTitle').textContent = id ? 'Editar Socio Honorífico' : 'Agregar Socio Honorífico';
+  document.getElementById('socioNombre').value = s ? s.nombre : '';
+  document.getElementById('socioMail').value = s ? s.mail : '';
+  document.getElementById('socioTelefono').value = s ? s.telefono : '';
+  document.getElementById('overlayAddSocio').style.display = 'flex';
+}
+
+function closeAddSocio() {
+  document.getElementById('overlayAddSocio').style.display = 'none';
+}
+
+function saveSocio() {
+  var nombre = document.getElementById('socioNombre').value.trim();
+  var mail = document.getElementById('socioMail').value.trim();
+  var telefono = document.getElementById('socioTelefono').value.trim();
+  if (!nombre) { alert('El nombre es obligatorio.'); return; }
+  if (!mail) { alert('El email es obligatorio.'); return; }
+  if (editSocioId) {
+    var s = sociosData.find(function(x){return x.id===editSocioId;});
+    if (s) { s.nombre = nombre; s.mail = mail; s.telefono = telefono; }
+  } else {
+    sociosData.push({ id: 'socio_' + Date.now(), nombre: nombre, mail: mail, telefono: telefono });
+  }
+  saveToFirestore();
+  closeAddSocio();
+  renderSocios();
+  updStats();
+}
+
+function deleteSocio(id) {
+  if (!confirm('¿Eliminar este socio honorífico?')) return;
+  sociosData = sociosData.filter(function(x){return x.id!==id;});
+  saveToFirestore();
+  renderSocios();
+  updStats();
+}
+
+function renderSocios() {
+  var q = (document.getElementById('searchSocios').value || '').toLowerCase();
+  var grid = document.getElementById('gridSocios');
+  grid.innerHTML = '';
+  var list = sociosData.filter(function(s){
+    return !q || s.nombre.toLowerCase().indexOf(q)>=0 || (s.mail||'').toLowerCase().indexOf(q)>=0;
+  });
+  document.getElementById('subhSocios').textContent = list.length + (list.length===1 ? ' socio honorífico' : ' socios honoríficos');
+  list.forEach(function(s) { buildSocioCard(grid, s); });
+}
+
+function buildSocioCard(grid, s) {
+  var key = s.id;
+  var card = document.createElement('div');
+  card.className = 'card' + (isSent(key) ? ' sent' : '');
+  card.setAttribute('data-id', key);
+  card.style.cursor = 'pointer';
+
+  // Badge dorado
+  var badge = document.createElement('div');
+  badge.className = 'card-badge';
+  badge.textContent = '⭐ SOCIO HONORÍFICO';
+  badge.style.background = 'rgba(201,168,76,0.2)';
+  badge.style.borderColor = '#c9a84c';
+  card.appendChild(badge);
+
+  var nm = document.createElement('div');
+  nm.className = 'card-name';
+  nm.textContent = s.nombre;
+  card.appendChild(nm);
+
+  var em = document.createElement('div');
+  em.className = 'card-email';
+  em.textContent = s.mail || 'Sin email';
+  card.appendChild(em);
+
+  if (s.telefono) {
+    var tel = document.createElement('div');
+    tel.style.cssText = 'font-size:.78rem;color:var(--text);opacity:.7;margin-top:3px;';
+    tel.textContent = '📞 ' + s.telefono;
+    card.appendChild(tel);
+  }
+
+  // Cena
+  var cenaA = parseInt(cenaData[key]) || 0;
+  var cenaN = parseInt(cenaNinosData[key]) || 0;
+  var cd = document.createElement('div');
+  cd.className = 'card-cena';
+  cd.style.flexWrap = 'wrap'; cd.style.gap = '6px';
+  var cvA = document.createElement('span');
+  cvA.className = cenaA > 0 ? 'cena-badge' : 'cena-badge empty';
+  cvA.textContent = '👤 ' + (cenaA > 0 ? cenaA + ' adultos' : '0 adultos');
+  var cvN = document.createElement('span');
+  cvN.className = cenaN > 0 ? 'cena-badge' : 'cena-badge empty';
+  cvN.style.marginLeft = '4px';
+  cvN.textContent = '🧒 ' + (cenaN > 0 ? cenaN + ' niños' : '0 niños');
+  cd.appendChild(document.createElement('span')); cd.firstChild.className='cena-lbl'; cd.firstChild.textContent='🍽️';
+  cd.appendChild(cvA); cd.appendChild(cvN);
+  card.appendChild(cd);
+
+  // Pago
+  var pago = pagoData[key];
+  var total = cenaA * 21 + cenaN * 10;
+  if (pago && pago.estado === 'total') {
+    var pd = document.createElement('div'); pd.className = 'card-pago pagada';
+    pd.textContent = '✅ Pagada totalidad — ' + total.toFixed(2) + ' €'; card.appendChild(pd);
+  } else if (pago && pago.estado === 'cuenta') {
+    var pd = document.createElement('div'); pd.className = 'card-pago cuenta';
+    var resto = Math.max(0, total - (parseFloat(pago.cantidad)||0));
+    pd.textContent = '🟠 A cuenta ' + (parseFloat(pago.cantidad)||0).toFixed(2) + ' € — Resta: ' + resto.toFixed(2) + ' €'; card.appendChild(pd);
+  } else if (total > 0) {
+    var pd = document.createElement('div'); pd.className = 'card-pago pendiente';
+    pd.textContent = '💶 Pendiente pago — ' + total.toFixed(2) + ' €'; card.appendChild(pd);
+  }
+
+  // Justificante
+  var jd = document.createElement('div');
+  jd.className = justData[key] ? 'card-just' : 'card-just nope';
+  jd.innerHTML = justData[key] ? '✅ Justificante adjunto' : '📄 Sin justificante';
+  card.appendChild(jd);
+
+  // Botones editar / eliminar
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:7px;margin-top:10px;';
+  var btnEdit = document.createElement('button');
+  btnEdit.className = 'just-btn';
+  btnEdit.textContent = '✏️ Editar';
+  btnEdit.onclick = function(e){ e.stopPropagation(); openAddSocio(s.id); };
+  var btnDel = document.createElement('button');
+  btnDel.className = 'just-btn del';
+  btnDel.textContent = '✕ Eliminar';
+  btnDel.onclick = function(e){ e.stopPropagation(); deleteSocio(s.id); };
+  btnRow.appendChild(btnEdit); btnRow.appendChild(btnDel);
+  card.appendChild(btnRow);
+
+  card.addEventListener('click', function(){ openSocioModal(s.id); });
+  grid.appendChild(card);
+}
+
+function openSocioModal(id) {
+  var s = sociosData.find(function(x){return x.id===id;});
+  if (!s) return;
+  currentIsSocio = true;
+  currentIdx = -1;
+  currentSocioId = s.id;
+  files = [];
+
+  document.getElementById('mTitle').textContent = s.nombre;
+  document.getElementById('mSub').textContent = '⭐ Socio Honorífico';
+
+  var info = document.getElementById('mInfo');
+  info.innerHTML = '';
+  function addInfo(lbl, val) {
+    var d = document.createElement('div'); d.className = 'iitem';
+    var l = document.createElement('label'); l.textContent = lbl;
+    var sp = document.createElement('span'); sp.textContent = val || '—';
+    d.appendChild(l); d.appendChild(sp); info.appendChild(d);
+  }
+  addInfo('Email', s.mail);
+  addInfo('Teléfono', s.telefono || '—');
+
+  document.getElementById('mTo').value = s.mail || '';
+  document.getElementById('mSubject').value = '';
+  document.getElementById('mBody').value = '';
+  document.getElementById('cenaAdultos').value = cenaData[s.id] || '';
+  document.getElementById('cenaNinos').value = cenaNinosData[s.id] || '';
+  document.getElementById('cenaSavedMsg').classList.remove('show');
+  renderJust(s.id);
+  renderPago(s.id);
+  calcTotal();
+
+  // BCC con todas las poblaciones y demás socios
+  var bl = document.getElementById('bccList');
+  bl.innerHTML = '';
+  for (var i = 0; i < DATA.length; i++) {
+    var d = DATA[i];
+    if (!d.mail) continue;
+    var lbl = document.createElement('label'); lbl.className = 'bcc-item';
+    var cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = d.mail; cb.setAttribute('data-name', d.n); cb.setAttribute('data-area', d.a);
+    cb.addEventListener('change', updBccCnt);
+    var sp2 = document.createElement('span'); sp2.textContent = d.n + (d.a !== '—' ? ' (Area ' + d.a + ')' : '');
+    lbl.appendChild(cb); lbl.appendChild(sp2); bl.appendChild(lbl);
+  }
+  sociosData.forEach(function(soc) {
+    if (soc.id === s.id || !soc.mail) return;
+    var lbl = document.createElement('label'); lbl.className = 'bcc-item';
+    var cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = soc.mail; cb.setAttribute('data-name', soc.nombre); cb.setAttribute('data-area', '⭐');
+    cb.addEventListener('change', updBccCnt);
+    var sp2 = document.createElement('span'); sp2.textContent = soc.nombre + ' (Socio Honorífico)';
+    lbl.appendChild(cb); lbl.appendChild(sp2); bl.appendChild(lbl);
+  });
+
+  bccOpen = false;
+  bl.classList.remove('open');
+  document.getElementById('bccArr').classList.remove('open');
+  document.getElementById('bccBtns').style.display = 'none';
+  document.getElementById('bccCnt').textContent = '';
+
+  document.getElementById('overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function isSent(n) { return log.some(function(x){return x.name===n;}); }
+
+function setArea(a, btn) {
+  currentArea = a;
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  render();
+}
+
+function render() {
+  var q = (document.getElementById('search').value || '').toLowerCase();
+  var grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  var showImp = (currentArea === 'todas') && (!q || 'imprenta'.indexOf(q) >= 0 || 'imprentabotella'.indexOf(q) >= 0);
+
+  var list = [];
+  for (var i = 1; i < DATA.length; i++) {
+    var p = DATA[i];
+    var matchArea = (currentArea === 'todas' || p.a === currentArea);
+    var matchQ = !q || p.n.toLowerCase().indexOf(q) >= 0 || (p.p||'').toLowerCase().indexOf(q) >= 0 || (p.mail||'').toLowerCase().indexOf(q) >= 0;
+    if (matchArea && matchQ) list.push(i);
+  }
+  // Orden alfabético
+  list.sort(function(a,b){ return DATA[a].n.localeCompare(DATA[b].n, 'es'); });
+
+  var total = list.length + (showImp ? 1 : 0);
+  document.getElementById('heading').textContent = currentArea === 'todas' ? 'Todas las Poblaciones' : 'Area ' + currentArea;
+  document.getElementById('subh').textContent = total + (total === 1 ? ' entidad federada' : ' entidades federadas');
+  document.getElementById('sTotal').textContent = total;
+
+  if (showImp) buildCard(grid, 0);
+  for (var j = 0; j < list.length; j++) buildCard(grid, list[j]);
+}
+
+function buildCard(grid, idx) {
+  var p = DATA[idx];
+  var card = document.createElement('div');
+  card.className = 'card' + (p.n === 'IMPRENTA' ? ' imprenta' : '') + (isSent(p.n) ? ' sent' : '');
+  card.setAttribute('data-idx', idx);
+  card.addEventListener('click', function(){ openModal(parseInt(this.getAttribute('data-idx'))); });
+
+  if (isSent(p.n)) {
+    var sb = document.createElement('span');
+    sb.className = 'sent-badge';
+    sb.textContent = 'Enviado';
+    card.appendChild(sb);
+  }
+
+  if (p.n === 'IMPRENTA') {
+    var ic = document.createElement('div');
+    ic.className = 'card-icon';
+    ic.textContent = String.fromCodePoint(0x1F5A8);
+    card.appendChild(ic);
+  }
+
+  var nm = document.createElement('div');
+  nm.className = 'card-name';
+  nm.textContent = p.n === 'IMPRENTA' ? 'Miguel Angel' : p.n;
+  card.appendChild(nm);
+
+  var ar = document.createElement('div');
+  ar.className = 'card-badge';
+  if (p.n === 'IMPRENTA') {
+    ar.textContent = 'Organización UNDEF';
+    ar.style.background = 'rgba(201,168,76,0.2)';
+    ar.style.borderColor = '#c9a84c';
+  } else {
+    ar.textContent = 'AREA ' + p.a;
+  }
+  card.appendChild(ar);
+
+  var pr = document.createElement('div');
+  pr.className = 'card-pres';
+  pr.textContent = (p.p || '—');
+  card.appendChild(pr);
+
+  var em = document.createElement('div');
+  em.className = 'card-email';
+  em.textContent = (p.mail || 'Sin email');
+  card.appendChild(em);
+
+  // Asistentes cena
+  if (p.n !== 'IMPRENTA') {
+    var cenaVal = cenaData[p.n];
+    var ninosVal = cenaNinosData[p.n];
+    var cd = document.createElement('div');
+    cd.className = 'card-cena';
+    cd.style.flexWrap = 'wrap';
+    cd.style.gap = '6px';
+
+    // Adultos
+    var clA = document.createElement('span'); clA.className = 'cena-lbl'; clA.textContent = '👤';
+    var cvA = document.createElement('span');
+    if (cenaVal !== undefined && parseInt(cenaVal) > 0) {
+      cvA.className = 'cena-badge'; cvA.textContent = cenaVal + ' adultos';
+    } else {
+      cvA.className = 'cena-badge empty'; cvA.textContent = '0 adultos';
+    }
+    cd.appendChild(clA); cd.appendChild(cvA);
+
+    // Niños
+    var clN = document.createElement('span'); clN.className = 'cena-lbl'; clN.style.marginLeft='4px'; clN.textContent = '🧒';
+    var cvN = document.createElement('span');
+    if (ninosVal !== undefined && parseInt(ninosVal) > 0) {
+      cvN.className = 'cena-badge'; cvN.textContent = ninosVal + ' niños';
+    } else {
+      cvN.className = 'cena-badge empty'; cvN.textContent = '0 niños';
+    }
+    cd.appendChild(clN); cd.appendChild(cvN);
+
+    card.appendChild(cd);
+
+    // Justificante
+    var jd = document.createElement('div');
+    if (justData[p.n]) {
+      jd.className = 'card-just';
+      jd.innerHTML = '✅ Justificante adjunto';
+    } else {
+      jd.className = 'card-just nope';
+      jd.innerHTML = '📄 Sin justificante';
+    }
+    card.appendChild(jd);
+
+    // Pago
+    var pago = pagoData[p.n];
+    var adultos = parseInt(cenaData[p.n]) || 0;
+    var ninos = parseInt(cenaNinosData[p.n]) || 0;
+    var total = adultos * 21 + ninos * 10;
+    if (pago && pago.estado === 'total') {
+      var pd = document.createElement('div');
+      pd.className = 'card-pago pagada';
+      pd.textContent = '✅ Pagada totalidad — ' + total.toFixed(2) + ' €';
+      card.appendChild(pd);
+    } else if (pago && pago.estado === 'cuenta') {
+      var pd = document.createElement('div');
+      pd.className = 'card-pago cuenta';
+      var resto = Math.max(0, total - (parseFloat(pago.cantidad) || 0));
+      pd.textContent = '🟠 A cuenta ' + (parseFloat(pago.cantidad)||0).toFixed(2) + ' € — Resta: ' + resto.toFixed(2) + ' €';
+      card.appendChild(pd);
+    } else if (adultos > 0) {
+      var pd = document.createElement('div');
+      pd.className = 'card-pago pendiente';
+      pd.textContent = '💶 Pendiente pago — ' + total.toFixed(2) + ' €';
+      card.appendChild(pd);
+    }
+  }
+
+  grid.appendChild(card);
+}
+
+function openModal(idx) {
+  var p = DATA[idx];
+  if (!p) return;
+  currentIdx = idx;
+  currentIsSocio = false;
+  currentSocioId = null;
+  files = [];
+  renderFiles();
+
+  document.getElementById('mTitle').textContent = p.n === 'IMPRENTA' ? 'Miguel Angel' : p.n;
+  document.getElementById('mSub').textContent = p.n === 'IMPRENTA' ? 'Organización UNDEF' : 'Area ' + p.a + ' - ' + p.e;
+
+  var info = document.getElementById('mInfo');
+  info.innerHTML = '';
+  function addInfo(lbl, val) {
+    var d = document.createElement('div'); d.className = 'iitem';
+    var l = document.createElement('label'); l.textContent = lbl;
+    var s = document.createElement('span'); s.textContent = val || '—';
+    d.appendChild(l); d.appendChild(s); info.appendChild(d);
+  }
+  addInfo('Entidad', p.e);
+  addInfo('Presidente/a', p.p);
+  addInfo('Direccion', p.d);
+  addInfo('Localidad', p.cp);
+  addInfo('Telefono', p.t);
+  addInfo('CIF', p.cif);
+
+  document.getElementById('mTo').value = p.mail || '';
+  document.getElementById('mSubject').value = '';
+  document.getElementById('mBody').value = '';
+  document.getElementById('cenaAdultos').value = cenaData[p.n] || '';
+  document.getElementById('cenaNinos').value = cenaNinosData[p.n] || '';
+  document.getElementById('cenaSavedMsg').classList.remove('show');
+  renderJust(p.n);
+  renderPago(p.n);
+  calcTotal();
+
+  var bl = document.getElementById('bccList');
+  bl.innerHTML = '';
+  for (var i = 0; i < DATA.length; i++) {
+    var d = DATA[i];
+    if (d.n === p.n || !d.mail) continue;
+    var lbl = document.createElement('label'); lbl.className = 'bcc-item';
+    var cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = d.mail; cb.setAttribute('data-name', d.n); cb.setAttribute('data-area', d.a);
+    cb.addEventListener('change', updBccCnt);
+    var sp = document.createElement('span'); sp.textContent = d.n + ' (Area ' + d.a + ')';
+    lbl.appendChild(cb); lbl.appendChild(sp); bl.appendChild(lbl);
+  }
+
+  bccOpen = false;
+  bl.classList.remove('open');
+  document.getElementById('bccArr').classList.remove('open');
+  document.getElementById('bccBtns').style.display = 'none';
+  document.getElementById('bccCnt').textContent = '';
+
+  document.getElementById('overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+var currentSocioId = null;
+
+function getCurrentKey() {
+  if (currentIsSocio) return currentSocioId;
+  if (currentIdx >= 0) return DATA[currentIdx].n;
+  return null;
+}
+
+function saveCena() {
+  var key = getCurrentKey();
+  if (!key) return;
+  var valA = parseInt(document.getElementById('cenaAdultos').value) || 0;
+  var valN = parseInt(document.getElementById('cenaNinos').value) || 0;
+  cenaData[key] = valA;
+  cenaNinosData[key] = valN;
+  
+  saveToFirestore();
+  updStats();
+  if (currentIsSocio) renderSocios(); else render();
+  var msg = document.getElementById('cenaSavedMsg');
+  msg.classList.add('show');
+  setTimeout(function(){ msg.classList.remove('show'); }, 2000);
+}
+
+var PRECIO_ADULTO = 21;
+var PRECIO_NINO = 10;
+
+function calcTotal() {
+  var adultos = parseInt(document.getElementById('cenaAdultos').value) || 0;
+  var ninos = parseInt(document.getElementById('cenaNinos').value) || 0;
+  var total = adultos * PRECIO_ADULTO + ninos * PRECIO_NINO;
+  document.getElementById('pagoTotalAmt').textContent = (adultos > 0 || ninos > 0) ? total.toFixed(2) + ' €' : '— €';
+  calcResto();
+}
+
+function calcResto() {
+  var adultos = parseInt(document.getElementById('cenaAdultos').value) || 0;
+  var ninos = parseInt(document.getElementById('cenaNinos').value) || 0;
+  var total = adultos * PRECIO_ADULTO + ninos * PRECIO_NINO;
+  var ingresado = parseFloat(document.getElementById('pagoCuentaAmt').value) || 0;
+  var resto = Math.max(0, total - ingresado);
+  document.getElementById('pagoRestoAmt').textContent = total > 0 ? resto.toFixed(2) + ' €' : '— €';
+}
+
+function setPago(estado) {
+  var key = getCurrentKey();
+  if (!key) return;
+  var adultos = parseInt(document.getElementById('cenaAdultos').value) || 0;
+  var ninos = parseInt(document.getElementById('cenaNinos').value) || 0;
+  var total = adultos * PRECIO_ADULTO + ninos * PRECIO_NINO;
+  var cantidadActual = pagoData[key] ? pagoData[key].cantidad : 0;
+  pagoData[key] = { estado: estado, cantidad: estado === 'total' ? total : cantidadActual };
+  saveToFirestore();
+  renderPago(key);
+  if (currentIsSocio) renderSocios(); else render();
+}
+
+function savePagoCuenta() {
+  var key = getCurrentKey();
+  if (!key) return;
+  var cantidad = parseFloat(document.getElementById('pagoCuentaAmt').value) || 0;
+  if (!pagoData[key]) pagoData[key] = { estado: 'cuenta' };
+  pagoData[key].cantidad = cantidad;
+  saveToFirestore();
+  if (currentIsSocio) renderSocios(); else render();
+}
+
+function renderPago(name) {
+  var adultos = parseInt(document.getElementById('cenaAdultos').value) || 0;
+  var pago = pagoData[name] || { estado: 'sin', cantidad: 0 };
+  var estado = pago.estado || 'sin';
+
+  // Botones activos
+  document.getElementById('btnPagadaTotal').classList.toggle('active', estado === 'total');
+  document.getElementById('btnPagadaCuenta').classList.toggle('active', estado === 'cuenta');
+  document.getElementById('btnSinPago').classList.toggle('active', estado === 'sin');
+
+  // Caja a cuenta
+  var cuentaBox = document.getElementById('pagoCuentaBox');
+  if (estado === 'cuenta') {
+    cuentaBox.classList.add('show');
+    document.getElementById('pagoCuentaAmt').value = pago.cantidad || '';
+    calcResto();
+  } else {
+    cuentaBox.classList.remove('show');
+  }
+}
+
+function renderJust(name) {
+  var j = justData[name];
+  var preview = document.getElementById('justPreview');
+  var drop = document.getElementById('justDrop');
+  if (j) {
+    document.getElementById('justFileName').innerHTML = '📄 ' + j.name;
+    preview.classList.add('show');
+    drop.style.display = 'none';
+  } else {
+    preview.classList.remove('show');
+    drop.style.display = '';
+  }
+}
+
+function onJustDrop(e) {
+  e.preventDefault();
+  var f = e.dataTransfer.files[0];
+  if (f) processJustFile(f);
+}
+
+function onJustFile(files) {
+  if (files[0]) processJustFile(files[0]);
+}
+
+function processJustFile(f) {
+  if (f.size > 1 * 1024 * 1024) { alert('El archivo supera 1MB. Por favor elige uno más pequeño o comprime el PDF.'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var key = getCurrentKey();
+    if (!key) return;
+    justData[key] = { name: f.name, type: f.type, data: e.target.result };
+    saveJustData();
+    renderJust(key);
+    if (currentIsSocio) renderSocios(); else render();
+  };
+  reader.readAsDataURL(f);
+}
+
+function justView() {
+  var key = getCurrentKey();
+  var j = justData[key];
+  if (!j) return;
+  var w = window.open();
+  if (j.type === 'application/pdf') {
+    w.document.write('<iframe src="' + j.data + '" style="width:100%;height:100vh;border:none"></iframe>');
+  } else {
+    w.document.write('<img src="' + j.data + '" style="max-width:100%">');
+  }
+}
+
+function justDownload() {
+  var key = getCurrentKey();
+  var j = justData[key];
+  if (!j) return;
+  var a = document.createElement('a');
+  a.href = j.data;
+  a.download = j.name;
+  a.click();
+}
+
+function justDelete() {
+  if (!confirm('¿Eliminar el justificante?')) return;
+  var key = getCurrentKey();
+  delete justData[key];
+  saveJustData();
+  document.getElementById('justFile').value = '';
+  renderJust(key);
+  if (currentIsSocio) renderSocios(); else render();
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  currentIdx = -1;
+  currentIsSocio = false;
+  currentSocioId = null;
+  files = [];
+}
+
+function toggleBcc() {
+  bccOpen = !bccOpen;
+  document.getElementById('bccList').classList.toggle('open', bccOpen);
+  document.getElementById('bccArr').classList.toggle('open', bccOpen);
+  document.getElementById('bccBtns').style.display = bccOpen ? 'flex' : 'none';
+  if (bccOpen) updBccCnt();
+}
+
+function updBccCnt() {
+  var c = document.querySelectorAll('#bccList input:checked').length;
+  var t = document.querySelectorAll('#bccList input').length;
+  document.getElementById('bccCnt').textContent = c > 0 ? c + ' de ' + t + ' seleccionadas' : '';
+}
+
+function bccAll() { document.querySelectorAll('#bccList input').forEach(function(x){x.checked=true;}); updBccCnt(); }
+function bccNone() { document.querySelectorAll('#bccList input').forEach(function(x){x.checked=false;}); updBccCnt(); }
+function bccArea() {
+  if (currentIdx < 0) return;
+  var a = DATA[currentIdx].a;
+  document.querySelectorAll('#bccList input').forEach(function(x){x.checked = x.getAttribute('data-area')===a;});
+  updBccCnt();
+}
+
+function addFiles(f) { files = files.concat(Array.from(f)); renderFiles(); }
+function onDrop(e) { e.preventDefault(); addFiles(e.dataTransfer.files); }
+function renderFiles() {
+  var fl = document.getElementById('fList'); fl.innerHTML = '';
+  files.forEach(function(f,i){
+    var d = document.createElement('div'); d.className = 'fitem';
+    d.textContent = f.name + ' ';
+    var r = document.createElement('span'); r.className = 'frm'; r.textContent = 'x';
+    r.onclick = function(){files.splice(i,1);renderFiles();};
+    d.appendChild(r); fl.appendChild(d);
+  });
+}
+
+function doSend() {
+  var to = document.getElementById('mTo').value.trim();
+  var subj = document.getElementById('mSubject').value.trim();
+  var body = document.getElementById('mBody').value;
+  if (!to) { alert('No hay email destinatario.'); return; }
+  if (!subj) { alert('Escribe un asunto.'); return; }
+  var bccs = [], bccn = [];
+  document.querySelectorAll('#bccList input:checked').forEach(function(x){bccs.push(x.value);bccn.push(x.getAttribute('data-name'));});
+
+  // Descargar archivos adjuntos automáticamente
+  var allFiles = files.slice();
+  var hasAttachments = allFiles.length > 0;
+  if (hasAttachments) {
+    allFiles.forEach(function(f) {
+      var url2 = URL.createObjectURL(f);
+      var a = document.createElement('a');
+      a.href = url2;
+      a.download = f.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url2); }, 1000);
+    });
+  }
+
+  var url = 'https://mail.google.com/mail/u/0/?view=cm&to=' + encodeURIComponent(to) + '&su=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
+  if (bccs.length) url += '&bcc=' + encodeURIComponent(bccs.join(','));
+  var key = getCurrentKey();
+  var name, area;
+  if (currentIsSocio) {
+    var soc = sociosData.find(function(x){return x.id===key;}) || {};
+    name = soc.nombre || key;
+    area = '⭐ Socio';
+  } else {
+    name = DATA[currentIdx].n;
+    area = DATA[currentIdx].a;
+  }
+  log.unshift({name:name, area:area, to:to, subject:subj, bcc:bccn, date:new Date().toLocaleString('es-ES'), files:allFiles.map(function(f){return f.name;})});
+  saveToFirestore();
+  updStats();
+  if (currentIsSocio) renderSocios(); else render();
+  closeModal();
+
+  // Mostrar aviso si hay adjuntos, luego abrir Gmail
+  if (hasAttachments) {
+    showAttachNotice(allFiles.map(function(f){return f.name;}), url);
+  } else {
+    window.open(url, '_blank');
+  }
+}
+
+function showAttachNotice(names, gmailUrl) {
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+  var box = document.createElement('div');
+  box.style.cssText = 'background:#1a1814;border:1px solid #c9a84c;border-radius:12px;padding:32px 36px;max-width:460px;width:90%;text-align:center;animation:up .3s ease';
+  box.innerHTML =
+    '<div style="font-size:2.5rem;margin-bottom:12px">📎</div>' +
+    '<div style="font-family:Playfair Display,serif;font-size:1.3rem;color:#f5f0e8;margin-bottom:8px">Adjunta los archivos en Gmail</div>' +
+    '<div style="font-size:.85rem;color:#d4c9b0;margin-bottom:16px">Los siguientes archivos se han descargado automáticamente en tu ordenador. Una vez abierto Gmail, arrástralos al correo o usa el botón de adjuntar 📎:</div>' +
+    '<div style="background:#252318;border-radius:6px;padding:10px 14px;margin-bottom:20px;text-align:left">' +
+    names.map(function(n){ return '<div style="font-size:.82rem;color:#90ee90;padding:3px 0">📄 ' + n + '</div>'; }).join('') +
+    '</div>' +
+    '<button id="noticeBtn" style="background:#c9a84c;color:#0f0e0c;border:none;border-radius:6px;padding:12px 28px;font-family:DM Sans,sans-serif;font-size:.95rem;font-weight:600;cursor:pointer;width:100%">Abrir Gmail →</button>';
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  document.getElementById('noticeBtn').onclick = function() {
+    window.open(gmailUrl, '_blank');
+    document.body.removeChild(overlay);
+  };
+  overlay.addEventListener('click', function(e){ if(e.target===overlay){ window.open(gmailUrl,'_blank'); document.body.removeChild(overlay); } });
+}
+
+function updStats() {
+  var unique = log.filter(function(x,i,a){return a.findIndex(function(y){return y.name===x.name;})===i;}).length;
+  document.getElementById('sSent').textContent = unique;
+  document.getElementById('fabN').textContent = log.length;
+  var totalCena = 0;
+  Object.values(cenaData).forEach(function(v){ totalCena += (parseInt(v) || 0); });
+  document.getElementById('sCena').textContent = totalCena;
+  var totalNinos = 0;
+  Object.values(cenaNinosData).forEach(function(v){ totalNinos += (parseInt(v) || 0); });
+  document.getElementById('sCenaNinos').textContent = totalNinos;
+  document.getElementById('sJust').textContent = Object.keys(justData).length;
+
+  // Pagadas: contar entidades pagadas (poblaciones + socios) y sus comensales
+  var pagadas = 0, comensalesPagados = 0;
+  // Poblaciones
+  for (var i = 1; i < DATA.length; i++) {
+    var key = DATA[i].n;
+    if (pagoData[key] && pagoData[key].estado === 'total') {
+      pagadas++;
+      comensalesPagados += (parseInt(cenaData[key]) || 0) + (parseInt(cenaNinosData[key]) || 0);
+    }
+  }
+  // Socios
+  sociosData.forEach(function(s) {
+    if (pagoData[s.id] && pagoData[s.id].estado === 'total') {
+      pagadas++;
+      comensalesPagados += (parseInt(cenaData[s.id]) || 0) + (parseInt(cenaNinosData[s.id]) || 0);
+    }
+  });
+  document.getElementById('sPagadas').textContent = pagadas;
+  var spEl = document.getElementById('sComensalesPagados');
+  if (spEl) spEl.textContent = comensalesPagados;
+
+  var sSocEl = document.getElementById('sSocios');
+  if (sSocEl) sSocEl.textContent = sociosData.length;
+}
+
+function openLog() {
+  document.getElementById('spanel').classList.add('open');
+  var b = document.getElementById('sbody'); b.innerHTML = '';
+  if (!log.length) { b.innerHTML = '<p style="opacity:.6;text-align:center;margin-top:30px;font-size:.85rem">Sin envios aun</p>'; return; }
+  log.forEach(function(s){
+    var d = document.createElement('div'); d.className = 'sentry';
+    var n = document.createElement('div'); n.className = 'sentry-name'; n.textContent = s.name; d.appendChild(n);
+    var dt = document.createElement('div'); dt.className = 'sentry-date'; dt.textContent = s.date; d.appendChild(dt);
+    var sj = document.createElement('div'); sj.className = 'sentry-subj'; sj.textContent = '"' + s.subject + '"'; d.appendChild(sj);
+    if (s.bcc && s.bcc.length) { var bv = document.createElement('div'); bv.className = 'sentry-bcc'; bv.textContent = 'BCC: ' + s.bcc.join(', '); d.appendChild(bv); }
+    b.appendChild(d);
+  });
+}
+
+function clearLog() {
+  if (!confirm('Borrar historial?')) return;
+  log = [];
+  saveToFirestore();
+  updStats(); render(); openLog();
+}
+
+document.getElementById('overlay').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+
+function exportPDF() {
+  var fecha = new Date().toLocaleDateString('es-ES', {day:'2-digit',month:'2-digit',year:'numeric'});
+  var totalAdultos = 0, totalNinos = 0, totalImporte = 0, totalIngresado = 0, totalResto = 0;
+  var totalPagadas = 0, totalCuenta = 0, totalPendientes = 0;
+
+  // Calcular totales — poblaciones
+  for (var i = 1; i < DATA.length; i++) {
+    var p = DATA[i];
+    var adultos = parseInt(cenaData[p.n]) || 0;
+    var ninos = parseInt(cenaNinosData[p.n]) || 0;
+    var importe = adultos * 21 + ninos * 10;
+    var pago = pagoData[p.n] || { estado: 'sin', cantidad: 0 };
+    var ingresado = pago.estado === 'total' ? importe : (parseFloat(pago.cantidad) || 0);
+    var resto = pago.estado === 'total' ? 0 : Math.max(0, importe - ingresado);
+    totalAdultos += adultos;
+    totalNinos += ninos;
+    totalImporte += importe;
+    totalIngresado += ingresado;
+    totalResto += resto;
+    if (pago.estado === 'total') totalPagadas++;
+    else if (pago.estado === 'cuenta') totalCuenta++;
+    else if (adultos > 0) totalPendientes++;
+  }
+
+  // Calcular totales — socios honoríficos
+  sociosData.forEach(function(s) {
+    var adultos = parseInt(cenaData[s.id]) || 0;
+    var ninos = parseInt(cenaNinosData[s.id]) || 0;
+    var importe = adultos * 21 + ninos * 10;
+    var pago = pagoData[s.id] || { estado: 'sin', cantidad: 0 };
+    var ingresado = pago.estado === 'total' ? importe : (parseFloat(pago.cantidad) || 0);
+    var resto = pago.estado === 'total' ? 0 : Math.max(0, importe - ingresado);
+    totalAdultos += adultos;
+    totalNinos += ninos;
+    totalImporte += importe;
+    totalIngresado += ingresado;
+    totalResto += resto;
+    if (pago.estado === 'total') totalPagadas++;
+    else if (pago.estado === 'cuenta') totalCuenta++;
+    else if (adultos > 0) totalPendientes++;
+  });
+
+  // Construir filas de la tabla
+  var filas = '';
+  for (var i = 1; i < DATA.length; i++) {
+    var p = DATA[i];
+    var adultos = parseInt(cenaData[p.n]) || 0;
+    var ninos = parseInt(cenaNinosData[p.n]) || 0;
+    if (adultos === 0 && ninos === 0) continue; // Solo mostrar los que tienen asistentes
+    var importe = adultos * 21 + ninos * 10;
+    var pago = pagoData[p.n] || { estado: 'sin', cantidad: 0 };
+    var ingresado = pago.estado === 'total' ? importe : (parseFloat(pago.cantidad) || 0);
+    var resto = pago.estado === 'total' ? 0 : Math.max(0, importe - ingresado);
+    var estadoHTML = '';
+    if (pago.estado === 'total') estadoHTML = '<span style="color:#27ae60;font-weight:700">✅ Pagada</span>';
+    else if (pago.estado === 'cuenta') estadoHTML = '<span style="color:#e67e22;font-weight:700">🟠 A cuenta</span>';
+    else estadoHTML = '<span style="color:#c0392b">⏳ Pendiente</span>';
+    var justHTML = justData[p.n] ? '<span style="color:#27ae60">✅</span>' : '<span style="color:#aaa">—</span>';
+    filas += '<tr>' +
+      '<td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;font-weight:500">' + p.n + '</td>' +
+      '<td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:center">' + p.a + '</td>' +
+      '<td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:center">' + (adultos || '—') + '</td>' +
+      '<td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:center">' + (ninos || '—') + '</td>' +
+      '<td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:right;font-weight:600">' + ((adultos > 0 || ninos > 0) ? importe.toFixed(2) + ' €' : '—') + '</td>' +
+      '<td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:right;color:#27ae60">' + (ingresado > 0 ? ingresado.toFixed(2) + ' €' : '—') + '</td>' +
+      '<td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:right;color:#c0392b;font-weight:600">' + (resto > 0 ? resto.toFixed(2) + ' €' : '—') + '</td>' +
+      '<td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:center">' + estadoHTML + '</td>' +
+      '<td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:center">' + justHTML + '</td>' +
+      '</tr>';
+  }
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+    '<title>UNDEF — Informe Cena 50 Aniversario</title>' +
+    '<style>body{font-family:Georgia,serif;margin:0;padding:0;color:#2c2416;background:#fff}' +
+    '@media print{.noprint{display:none!important}body{margin:0}}' +
+    '.header{background:#1a1814;color:#c9a84c;padding:28px 40px;display:flex;align-items:center;justify-content:space-between}' +
+    '.header h1{font-size:1.6rem;margin:0;letter-spacing:.05em}' +
+    '.header p{margin:4px 0 0;font-size:.85rem;color:#d4c9b0}' +
+    '.header .fecha{font-size:.8rem;color:#c9a84c;text-align:right}' +
+    '.resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:#f9f5ee;border-bottom:2px solid #c9a84c}' +
+    '.res-item{padding:16px 20px;text-align:center;border-right:1px solid #e0d8c8}' +
+    '.res-item:last-child{border-right:none}' +
+    '.res-num{font-size:2rem;font-weight:700;color:#1a1814}' +
+    '.res-lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#8a7a5a;margin-top:2px}' +
+    '.res-num.verde{color:#27ae60}.res-num.naranja{color:#e67e22}.res-num.rojo{color:#c0392b}' +
+    '.section{padding:24px 40px}' +
+    '.section h2{font-size:1rem;text-transform:uppercase;letter-spacing:.1em;color:#8a7a5a;margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid #e0d8c8}' +
+    'table{width:100%;border-collapse:collapse;font-size:.82rem}' +
+    'thead tr{background:#1a1814;color:#c9a84c}' +
+    'thead th{padding:9px 10px;text-align:left;font-weight:600;letter-spacing:.05em;font-size:.75rem;text-transform:uppercase}' +
+    'thead th.r{text-align:right}thead th.c{text-align:center}' +
+    'tbody tr:hover{background:#faf7f0}' +
+    'tfoot tr{background:#f0ebe0;font-weight:700}' +
+    'tfoot td{padding:9px 10px;border-top:2px solid #c9a84c}' +
+    '.footer{background:#1a1814;color:#8a7a5a;padding:14px 40px;font-size:.75rem;text-align:center;margin-top:20px}' +
+    '</style></head><body>' +
+
+    '<div class="header">' +
+    '<div><h1>UNDEF — Cena 50 Aniversario</h1><p>Informe de asistentes y estado de pagos</p></div>' +
+    '<div class="fecha">Generado el ' + fecha + '</div>' +
+    '</div>' +
+
+    '<div class="resumen">' +
+    '<div class="res-item"><div class="res-num">' + totalAdultos + '</div><div class="res-lbl">Total adultos</div></div>' +
+    '<div class="res-item"><div class="res-num">' + totalNinos + '</div><div class="res-lbl">Total niños</div></div>' +
+    '<div class="res-item"><div class="res-num">' + totalImporte.toFixed(2) + ' €</div><div class="res-lbl">Importe total</div></div>' +
+    '<div class="res-item"><div class="res-num verde">' + totalIngresado.toFixed(2) + ' €</div><div class="res-lbl">Total ingresado</div></div>' +
+    '</div>' +
+    '<div class="resumen" style="border-top:1px solid #e0d8c8">' +
+    '<div class="res-item"><div class="res-num rojo">' + totalResto.toFixed(2) + ' €</div><div class="res-lbl">Pendiente cobro</div></div>' +
+    '<div class="res-item"><div class="res-num verde">' + totalPagadas + '</div><div class="res-lbl">Pagadas totalidad</div></div>' +
+    '<div class="res-item"><div class="res-num naranja">' + totalCuenta + '</div><div class="res-lbl">Pago a cuenta</div></div>' +
+    '<div class="res-item"><div class="res-num rojo">' + totalPendientes + '</div><div class="res-lbl">Pendientes pago</div></div>' +
+    '</div>' +
+
+    '<div class="section">' +
+    '<h2>Detalle por población (solo con asistentes confirmados)</h2>' +
+    '<table><thead><tr>' +
+    '<th>Población</th><th class="c">Área</th><th class="c">Adultos</th><th class="c">Niños</th>' +
+    '<th class="r">Importe</th><th class="r">Ingresado</th><th class="r">Resta</th>' +
+    '<th class="c">Estado pago</th><th class="c">Justificante</th>' +
+    '</tr></thead><tbody>' + filas + '</tbody>' +
+    '<tfoot><tr>' +
+    '<td colspan="2">TOTALES</td>' +
+    '<td style="text-align:center">' + totalAdultos + '</td>' +
+    '<td style="text-align:center">' + totalNinos + '</td>' +
+    '<td style="text-align:right">' + totalImporte.toFixed(2) + ' €</td>' +
+    '<td style="text-align:right;color:#27ae60">' + totalIngresado.toFixed(2) + ' €</td>' +
+    '<td style="text-align:right;color:#c0392b">' + totalResto.toFixed(2) + ' €</td>' +
+    '<td colspan="2"></td>' +
+    '</tr></tfoot></table></div>' +
+
+    // Socios Honorificos section
+    (sociosData.length > 0 ? (function() {
+      var filasS = '';
+      var tA=0,tN=0,tI=0,tIng=0,tR=0;
+      sociosData.forEach(function(s) {
+        var a=parseInt(cenaData[s.id])||0, n=parseInt(cenaNinosData[s.id])||0;
+        var imp=a*21+n*10;
+        var pg=pagoData[s.id]||{estado:'sin',cantidad:0};
+        var ing=pg.estado==='total'?imp:(parseFloat(pg.cantidad)||0);
+        var res=pg.estado==='total'?0:Math.max(0,imp-ing);
+        tA+=a;tN+=n;tI+=imp;tIng+=ing;tR+=res;
+        var est=pg.estado==='total'?'<span style="color:#27ae60;font-weight:700">✅ Pagada</span>':pg.estado==='cuenta'?'<span style="color:#e67e22;font-weight:700">🟠 A cuenta</span>':'<span style="color:#c0392b">⏳ Pendiente</span>';
+        filasS+='<tr><td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;font-weight:500">'+s.nombre+'</td><td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:center">'+s.mail+'</td><td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:center">'+(a||'—')+'</td><td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:center">'+(n||'—')+'</td><td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:right;font-weight:600">'+((a>0||n>0)?imp.toFixed(2)+' €':'—')+'</td><td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:right;color:#27ae60">'+(ing>0?ing.toFixed(2)+' €':'—')+'</td><td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:right;color:#c0392b;font-weight:600">'+(res>0?res.toFixed(2)+' €':'—')+'</td><td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:center">'+est+'</td><td style="padding:7px 10px;border-bottom:1px solid #e0d8c8;text-align:center">'+(justData[s.id]?'<span style="color:#27ae60">✅</span>':'<span style="color:#aaa">—</span>')+'</td></tr>';
+      });
+      return '<div class="section"><h2>⭐ Socios Honoríficos ('+sociosData.length+')</h2><table><thead><tr><th>Nombre</th><th class="c">Email</th><th class="c">Adultos</th><th class="c">Niños</th><th class="r">Importe</th><th class="r">Ingresado</th><th class="r">Resta</th><th class="c">Estado pago</th><th class="c">Justificante</th></tr></thead><tbody>'+filasS+'</tbody><tfoot><tr><td colspan="2">TOTALES SOCIOS</td><td style="text-align:center">'+tA+'</td><td style="text-align:center">'+tN+'</td><td style="text-align:right">'+tI.toFixed(2)+' €</td><td style="text-align:right;color:#27ae60">'+tIng.toFixed(2)+' €</td><td style="text-align:right;color:#c0392b">'+tR.toFixed(2)+' €</td><td colspan="2"></td></tr></tfoot></table></div>';
+    })() : '') +
+
+    '<div class="footer">UNDEF — Gestión de Poblaciones · Cena 50 Aniversario · Informe generado el ' + fecha + '</div>' +
+    '<div class="noprint" style="text-align:center;padding:20px">' +
+    '<button onclick="window.print()" style="background:#1a1814;color:#c9a84c;border:1px solid #c9a84c;padding:12px 30px;border-radius:6px;font-size:1rem;cursor:pointer;margin-right:10px">🖨️ Imprimir / Guardar PDF</button>' +
+    '<button onclick="window.close()" style="background:transparent;color:#666;border:1px solid #ccc;padding:12px 30px;border-radius:6px;font-size:1rem;cursor:pointer">Cerrar</button>' +
+    '</div></body></html>';
+
+  var w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+// loadFromFirestore() ya llama a render(), updStats() y renderSocios() al cargar
+</script>
+
+<!-- Firebase CDN -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAaidQEZa_4EvdI56-F44m0y93835l6Q08",
+  authDomain: "cena-50-aniversario.firebaseapp.com",
+  projectId: "cena-50-aniversario",
+  storageBucket: "cena-50-aniversario.firebasestorage.app",
+  messagingSenderId: "135237489940",
+  appId: "1:135237489940:web:a3fef447e6ce5625f45e01"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+async function loadFromFirestore() {
+  showLoader(true);
+  try {
+    const snap = await db.collection('undef').doc('datos').get();
+    if (snap.exists) {
+      var d = snap.data();
+      log           = d.log           || [];
+      cenaData      = d.cenaData      || {};
+      cenaNinosData = d.cenaNinosData || {};
+      pagoData      = d.pagoData      || {};
+      sociosData    = d.sociosData    || [];
+    }
+    const snapJ = await db.collection('undef').doc('justificantes').get();
+    if (snapJ.exists) justData = snapJ.data().justData || {};
+  } catch(e) { console.error('Error cargando:', e); }
+  showLoader(false);
+  render();
+  updStats();
+  renderSocios();
+}
+
+async function saveToFirestore() {
+  try {
+    await db.collection('undef').doc('datos').set({
+      log, cenaData, cenaNinosData, pagoData, sociosData,
+      updatedAt: new Date().toISOString()
+    });
+  } catch(e) { console.error('Error guardando:', e); showSaveError(); }
+}
+
+async function saveJustData() {
+  try {
+    await db.collection('undef').doc('justificantes').set({ justData });
+  } catch(e) { console.error('Error justificante:', e); showSaveError(); }
+}
+
+// Sincronización en tiempo real
+db.collection('undef').doc('datos').onSnapshot(function(snap) {
+  if (!snap.exists) return;
+  var d = snap.data();
+  log           = d.log           || [];
+  cenaData      = d.cenaData      || {};
+  cenaNinosData = d.cenaNinosData || {};
+  pagoData      = d.pagoData      || {};
+  sociosData    = d.sociosData    || [];
+  render();
+  updStats();
+  renderSocios();
+  // Si el modal está abierto, refresca los valores sin cerrar
+  var key = getCurrentKey();
+  if (key) {
+    document.getElementById('cenaAdultos').value = cenaData[key] || '';
+    document.getElementById('cenaNinos').value = cenaNinosData[key] || '';
+    renderPago(key);
+    calcTotal();
+  }
+});
+
+loadFromFirestore();
+</script>
+</body>
+</html>
